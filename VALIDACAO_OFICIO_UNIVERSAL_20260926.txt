@@ -1,0 +1,23 @@
+VALIDACAO OFICIO UNIVERSAL 7002 - 2026-09-26
+
+Status: CORRIGIDO E PRONTO PARA VALIDACAO CLIENT-SIDE
+
+Problema:
+- Fechar ou abandonar a janela de fabricacao deixava menuskill_id 7002 ativo.
+- O estado pendente bloqueava as skills seguintes ate teleporte/troca de mapa.
+
+Correcao:
+- Nova skill de alvo ou de chao cancela o estado temporario 7002 e prossegue.
+- Os caminhos de fabricacao, falha, trade e lista vazia continuam seguros.
+
+Validacao:
+- Build Release x64: PASSOU.
+- Inicializacao login/char/map: PASSOU.
+- Portas e conexoes internas: PASSARAM.
+- Erros de skill/script/SQL na inicializacao: NENHUM.
+- Teste no Ragexe: PENDENTE DO USUARIO.
+
+Backup:
+- backup-oficio-item2-20260926-142346
+
+PACKETVER 20250716 preservado.

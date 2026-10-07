@@ -1,0 +1,20 @@
+VALIDACAO MONSTER CATALOG 7008 - 2026-09-26
+
+Status: SERVER-SIDE VALIDADO; PRONTO PARA VALIDACAO CLIENT-SIDE
+
+Resultados:
+- Totais e filtros normal/miniboss/MVP: PASSARAM.
+- Ordem por discovered_at: PASSOU.
+- Compartilhamento por account_id: PASSOU.
+- Duplicata da mesma especie em outro personagem: BLOQUEADA CORRETAMENTE.
+- Limpeza dos dados ficticios por rollback: PASSOU.
+- Switches administrativos na skill e no NPC: CORRIGIDOS.
+- Build Release x64: PASSOU.
+- Inicializacao login/char/map: PASSOU.
+- Erros de skill/script/SQL: NENHUM.
+- Teste visual no Ragexe: PENDENTE; controlador retornou apps vazio.
+
+Backup:
+- backup-monster-catalog-item3-20260926-150644
+
+PACKETVER 20250716 preservado.

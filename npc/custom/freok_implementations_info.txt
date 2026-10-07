@@ -1,0 +1,141 @@
+//============================================================
+// FreokRO V18 - NPC de Consulta de Implementacoes
+// Somente informativo. Atualizar este NPC a cada nova implementacao.
+// Local de testes: centro de Prontera.
+//============================================================
+
+prontera,160,186,4	script	Implementacoes FreokRO	4_F_KAFRA1,{
+	mes "[Implementacoes FreokRO]";
+	mes "Bem-vindo ao painel de consulta do FreokRO.";
+	mes "Aqui voce pode consultar os sistemas implementados atualmente.";
+	next;
+
+	while (1) {
+		switch(select("Sistemas principais:Comercio e Leilao:Sistemas complementares:Episode 19:Administracao / FUNK:Sobre este NPC:Sair")) {
+		case 1:
+			mes "[Implementacoes FreokRO]";
+			mes "^0055FFSistemas principais^000000";
+			mes "V1 - Random Options: fundacao.";
+			mes "V2 - Random Options: aquisicao, 0 a 5 opcoes, drops/autoloot e preservacao.";
+			mes "V3 - Preserve Toggle ON/OFF.";
+			mes "V4 - GearProtect contra venda acidental de equipamentos importantes.";
+			mes "V5 - Party Job Synergy.";
+			mes "V6 - Card Drop Announcement + Card Log SQL.";
+			mes "V7 - Critical global para skills.";
+			mes "V8 - Rental Card Return via RodEx.";
+			mes "V9 - Welcome System.";
+			mes "V10 - AutoAttack Core.";
+			mes "V11 - AutoAttack Filters: comum, elite, MVP e PvP.";
+			mes "AutoAttack: disponivel somente de segunda a sexta; bloqueio automatico no fim de semana.";
+			mes "V12 - Durability System + reparo e persistencia.";
+			next;
+			break;
+
+		case 2:
+			mes "[Implementacoes FreokRO]";
+			mes "^0055FFComercio e Leilao^000000";
+			mes "Market Clone / Offline Vending.";
+			mes "Extended Vending com moedas alternativas.";
+			mes "Black Market / Busca de Lojas.";
+			mes "- Busca lojas normais, offline e Market Clones.";
+			mes "- Acesso VIP remoto e viagem Free com quota diaria persistente.";
+			mes "Custom Auction - Fases 1 a 8:";
+			mes "- Fundacao e schema persistente.";
+			mes "- Item Escrow.";
+			mes "- Lances e Zeny escrow.";
+			mes "- Incremento minimo e anti-sniping.";
+			mes "- Comprar Agora.";
+			mes "- Settlement e entregas via RodEx.";
+			mes "- Taxa de anuncio e imposto de venda.";
+			mes "- Protecao contra auto-lance do vendedor.";
+			mes "- Historico de precos.";
+			mes "- Leiloes Especiais do Servidor.";
+			mes "- Administracao, cancelamento e recuperacao.";
+			mes "- Hardening de concorrencia e auditoria.";
+			mes "^FF6600Pendente:^000000 testes finais de crash/client-side e eventual hardening C++/char-server.";
+			next;
+			break;
+
+		case 3:
+			mes "[Implementacoes FreokRO]";
+			mes "^0055FFSistemas complementares^000000";
+			mes "MVP Tomb Extended.";
+			mes "Regional Boss persistente.";
+			mes "Basic Skills Custom: desabilitadas na V19; NV_BASIC padrao restaurada.";
+			mes "Monster Catalog / Olhar do Cacador.";
+			mes "Catalog EXP.";
+			mes "Champion Monsters.";
+			mes "ServerGuard baseline.";
+			mes "Voice Chat / bridge server-side.";
+			mes "Advanced Pet System - Fase 1.";
+			mes "- Combate e retaliacao de pets com intimidade alta.";
+			mes "- Perfis individuais de ataque, suporte e utilidade.";
+			mes "- Skills de pet e suporte habilitados no battle config.";
+			mes "- Mantem bonus e evolucoes Renewal ja existentes.";
+			mes "Advanced Pet System - Fase 2.";
+			mes "Advanced Pet System - Fase 3: Pet Loot sem Lealdade + AutoFeed universal + @autofeed.";
+			mes "Advanced Pet System - Fase 4: Pet Loot balanceado em 10/44 pets Utilidade.";
+			mes "- Familias Poring, Drops e Yoyo + Poporing e Marin.";
+			mes "- Pet Loot moderno: pet caminha ate o drop e entrega direto ao inventario/party.";
+			mes "Advanced Pet System - Fase 5: raio de coleta progressivo por familia.";
+			mes "- Pet Loot nao possui mais capacidade de itens; o limite real e a bag do jogador.";
+			mes "- Evolucoes melhoram o raio de deteccao/coleta em celulas.";
+			mes "Advanced Pet System - Fase 6: tags [off] [def] [uti] em pets ativos e ovos.";
+			mes "Advanced Pet System - Fase 7: EXP e Drop pessoal para pets [uti].";
+			mes "- 6 pets de EXP pessoal e 6 pets de Drop Rate pessoal.";
+			mes "- Bonus nao compartilhado como taxa com party/guilda.";
+			mes "Advanced Pet System - Fase 8: rebalance EXP/Drop.";
+			mes "- EXP: +10% base / +15% evoluido; Drop: +10%.";
+			mes "Advanced Pet System - Fase 9: HP, cooldown e KO de combate.";
+			mes "- [off]/[def] podem sofrer dano; [def] possui 175% HP base.";
+			mes "- KO: desaparece 5 min e retorna com HP cheio; ovo nao e perdido.";
+			mes "- Respeita prioridade, peso, slots, party loot e Random Options.";
+			mes "- Falha de inventario mantem o item no chao.";
+			mes "- Autoloot nativo restrito a administracao.";
+			mes "Advanced Pet System - Fase 11: intimidade max 750; inicio 150; Cordial/combate em 450.";
+			mes "- AutoFeed perfeito e exclusivo VIP (Group Level 1+); Group 0 sem acesso.";
+			next;
+			break;
+
+		case 4:
+			mes "[Implementacoes FreokRO]";
+			mes "^0055FFEpisode 19 - Land of Tales, Isgard^000000";
+			mes "Questline, mapas, warps e spawns.";
+			mes "Merchants e barters.";
+			mes "Mobs, skills e AI do episodio.";
+			mes "Bagot Laboratory.";
+			mes "Confused Snake's Nest.";
+			mes "Iwin Patrol.";
+			mes "Airship Destruction.";
+			mes "Simulation Battle.";
+			mes "Compatibilidade server-side: PACKETVER 20250716.";
+			mes "^FF6600Status:^000000 funcional para testes; certificacao completa depende do walkthrough/runtime/client-side.";
+			next;
+			break;
+
+		case 5:
+			mes "[Implementacoes FreokRO]";
+			mes "^0055FFAdministracao^000000";
+			mes "FUNK v1.0 - Function Control Panel.";
+			mes "Controle runtime dos sistemas suportados.";
+			mes "Master switch e switches individuais.";
+			mes "Custom Auction integrado ao FUNK.";
+			mes "Ferramentas administrativas e auditoria do Auction para Group 99+.";
+			next;
+			break;
+
+		case 6:
+			mes "[Implementacoes FreokRO]";
+			mes "Este NPC e somente para consulta.";
+			mes "Ele nao ativa, desativa, concede itens ou altera configuracoes.";
+			mes "A lista deve acompanhar cada nova implementacao adicionada ao FreokRO.";
+			next;
+			break;
+
+		default:
+			mes "[Implementacoes FreokRO]";
+			mes "Ate mais.";
+			close;
+		}
+	}
+}

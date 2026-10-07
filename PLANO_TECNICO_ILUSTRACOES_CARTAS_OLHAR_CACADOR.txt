@@ -1,0 +1,222 @@
+FREOKRO V19
+PLANO TECNICO - ILUSTRACOES DE CARTAS NO OLHAR DO CACADOR
+Data: 2026-09-25
+PACKETVER: 20250716
+
+===============================================================================
+1. OBJETIVO
+===============================================================================
+
+Ao usar a skill Olhar do Cacador em uma criatura pela primeira vez na conta:
+
+- Registrar a especie no catalogo.
+- Pagar a recompensa de EXP apenas uma vez.
+- Exibir a janela Monster Info.
+- Se o monstro possuir carta, mostrar na tela a ilustracao verdadeira da carta.
+- Nao conceder a carta ao jogador.
+- Nao alterar o inventario.
+- Nao mostrar o texto "Carta encontrada".
+- Nao repetir a ilustracao em consultas posteriores.
+- Nao causar erro "Cannot find File".
+- Funcionar para todos os monstros que possuam uma carta valida.
+
+===============================================================================
+2. PROBLEMA CONFIRMADO
+===============================================================================
+
+O primeiro metodo testado utilizou o pacote de anuncio de item especial.
+
+Resultado observado:
+
+- O cliente mostrou:
+  "Congratulations, Acquired [Pecopeco Egg Card]!"
+- A ilustracao completa da carta nao foi exibida.
+- Esse pacote serve para anunciar obtencao de item, nao para mostrar card art.
+- Nenhum item foi realmente criado, mas o comportamento visual estava errado.
+
+Esse metodo foi removido.
+
+===============================================================================
+3. MECANISMO CORRETO CONFIRMADO
+===============================================================================
+
+As ilustracoes verdadeiras existem dentro de:
+
+data.grf
+  data\texture\???????\cardbmp\
+
+O servidor pode mostrar uma dessas imagens como cut-in usando ZC_SHOW_IMAGE por
+meio de clif_cutin, desde que a imagem tambem esteja disponivel em:
+
+client\data\texture\???????\illust\
+
+Para evitar problemas de codificacao, os arquivos extraidos recebem nomes ASCII:
+
+freok_card_<ITEM_ID>.bmp
+
+Exemplos atualmente instalados:
+
+- freok_card_4007.bmp
+  Origem: Peco Peco Egg Card
+  Arte inspecionada: PECOPECO EGG
+
+- freok_card_4031.bmp
+  Origem: Pecopeco Card
+  Arte inspecionada: PECOPECO
+
+Chamada do servidor:
+
+clif_cutin(*sd, "freok_card_4007", 4);
+
+O tipo 4 mostra a imagem no centro da tela em uma janela sem moldura e com botao
+de fechamento.
+
+===============================================================================
+4. LIMITACAO ATUAL
+===============================================================================
+
+O cliente possui milhares de arquivos cardbmp, mas os nomes dentro do GRF estao
+em coreano e nao incluem diretamente o ID numerico do item.
+
+Exemplo:
+
+- Item rAthena: 4007 / Pecopeco_Egg_Card
+- Arquivo GRF: cardbmp\[nome coreano].bmp
+
+O itemInfo.lua em uso nao resolve esse relacionamento. As cartas utilizam o
+recurso generico "nameless card", enquanto a arte completa fica separada em
+cardbmp.
+
+Portanto, copiar arquivos em ordem ou tentar converter automaticamente o nome
+Aegis para coreano pode associar uma carta ao monstro errado.
+
+A implementacao atual possui apenas os IDs 4007 e 4031 como prova funcional.
+Ela ainda nao cobre todos os monstros e nao deve ser considerada concluida.
+
+===============================================================================
+5. SOLUCAO DEFINITIVA
+===============================================================================
+
+Gerar um indice confiavel contendo:
+
+ITEM_ID -> ARQUIVO CARDBMP -> ARQUIVO CUT-IN ASCII
+
+Formato sugerido:
+
+4007,Pecopeco_Egg_Card,<nome coreano>.bmp,freok_card_4007.bmp
+4031,Pecopeco_Card,<nome coreano>.bmp,freok_card_4031.bmp
+
+Etapas:
+
+1. Ler todos os itens Type: Card dos bancos item_db do rAthena.
+2. Ler todos os drops normais dos monstros no mob_db.
+3. Manter apenas cartas realmente associadas a monstros.
+4. Ler a lista de arquivos cardbmp diretamente do data.grf.
+5. Relacionar cada ID de carta com sua arte correta.
+6. Extrair cada imagem validada.
+7. Salvar cada imagem como freok_card_<ITEM_ID>.bmp na pasta illust.
+8. Gerar uma tabela server-side com todos os IDs instalados.
+9. Durante a primeira descoberta:
+   - localizar o primeiro drop do tipo IT_CARD;
+   - consultar o indice;
+   - chamar clif_cutin somente quando o arquivo estiver confirmado.
+10. Se uma carta ainda nao estiver no indice:
+   - nao mostrar anuncio;
+   - nao chamar cut-in;
+   - continuar normalmente com Monster Info e recompensa;
+   - nao gerar erro no cliente.
+
+===============================================================================
+6. REGRAS DE SEGURANCA
+===============================================================================
+
+- Nao chamar clif_cutin para um arquivo que nao exista no cliente.
+- Nao utilizar o nome coreano diretamente no codigo C++.
+- Nao usar o pacote de anuncio de obtencao.
+- Nao criar item temporario ou falso no inventario.
+- Nao alterar a chance de drop.
+- Nao alterar o mob_db ou item_db para forcar associacoes.
+- Nao usar correspondencia apenas pela ordem dos arquivos.
+- Nao baixar artes ou tabelas da internet.
+- Preservar PACKETVER 20250716.
+- Fazer backup antes de gerar ou substituir o indice.
+
+===============================================================================
+7. ARQUIVOS ENVOLVIDOS
+===============================================================================
+
+Servidor:
+
+- src/map/skills/custom/skill_factory_custom.cpp
+- src/map/clif.cpp
+- src/map/clif.hpp
+- db/re/item_db_etc.yml
+- db/re/mob_db.yml
+- db/import/skill_db.yml
+
+Cliente:
+
+- data.grf
+- data/texture/???????/cardbmp/ (origem dentro do GRF)
+- data/texture/???????/illust/ (destino dos cut-ins)
+
+Registro:
+
+- REGISTRO_TECNICO_DEFINITIVO_FREOKRO.txt
+
+===============================================================================
+8. VALIDACAO NECESSARIA
+===============================================================================
+
+Validacao estatica:
+
+- Todos os IDs do indice existem no item_db.
+- Todos os itens do indice sao Type: Card.
+- Cada arquivo freok_card_<ID>.bmp existe.
+- Cada BMP abre corretamente.
+- Nao existem IDs duplicados.
+- Nao existem dois IDs apontando acidentalmente para artes diferentes sem
+  justificativa.
+- Compilacao Release x64 concluida sem erros novos.
+
+Validacao no jogo:
+
+1. Apagar ou usar uma conta sem registro da especie.
+2. Usar Olhar do Cacador no monstro.
+3. Confirmar Monster Info.
+4. Confirmar recompensa unica.
+5. Confirmar a ilustracao correta da carta.
+6. Confirmar ausencia do anuncio "Congratulations, Acquired".
+7. Confirmar que nenhuma carta entrou no inventario.
+8. Usar novamente na mesma especie.
+9. Confirmar que nao houve nova EXP nem nova ilustracao.
+10. Testar um monstro sem carta e confirmar que nao aparece cut-in.
+11. Testar cartas comuns, MVP e monstros com drops customizados.
+12. Verificar que o map-server nao gera erros ou warnings.
+
+===============================================================================
+9. ESTADO REAL EM 2026-09-25
+===============================================================================
+
+Concluido:
+
+- Anuncio incorreto removido.
+- Mecanismo de cut-in compilado.
+- Artes 4007 e 4031 extraidas do data.grf.
+- Imagem 4007 inspecionada visualmente.
+- Release x64 compilado com sucesso.
+- Nenhuma carta e criada no inventario.
+- Registro tecnico principal atualizado em ASCII.
+
+Pendente:
+
+- Gerar o relacionamento completo entre IDs e nomes coreanos de cardbmp.
+- Extrair e instalar todas as artes correspondentes.
+- Substituir o switch temporario por um indice completo.
+- Validar uma amostra ampla no cliente.
+- Resolver de forma independente a ocultacao total da roleta usada como seletor
+  de alvo, sem quebrar Domar Criatura.
+
+===============================================================================
+FIM DO DOCUMENTO
+===============================================================================

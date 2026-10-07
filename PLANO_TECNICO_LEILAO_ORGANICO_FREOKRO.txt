@@ -1,0 +1,143 @@
+================================================================================
+FREOKRO V19 - PLANO TECNICO DO LEILAO ORGANICO
+Data: 2026-09-27
+Estado: planejamento; nenhuma implementacao deste documento foi aplicada
+================================================================================
+
+1. OBJETIVO
+
+O jogador deve abrir somente o cliente FreokRO, entrar no personagem e usar a
+skill Black Market (9007). Depois da validacao do map-server, a Casa de Leiloes
+deve abrir automaticamente, com dados reais e operacoes autoritativas. Nenhum
+navegador, PowerShell ou executavel auxiliar deve ser iniciado manualmente.
+
+2. FLUXO FINAL
+
+1) O launcher do FreokRO inicia o Ragexe e o modulo de integracao.
+2) O jogador usa a skill 9007.
+3) O map-server valida flags, mapa, conta e personagem.
+4) O map-server cria uma sessao curta e envia OPEN_AUCTION.
+5) O modulo cliente abre uma unica instancia do HUD.
+6) O HUD consulta dados reais usando o token da sessao.
+7) Lances, compras, vendas e cancelamentos retornam ao map-server.
+8) O map-server valida e executa toda alteracao de item ou Zeny.
+9) Ao fechar, trocar personagem ou desconectar, a sessao e invalidada.
+
+3. COMPONENTES
+
+3.1 Modulo cliente
+- Carregado automaticamente com o Ragexe, preferencialmente por proxy dinput8.
+- Encaminha normalmente o DirectInput original.
+- Reconhece somente o pacote customizado OPEN_AUCTION.
+- Abre, focaliza, fecha e reposiciona o HUD.
+- Impede instancias duplicadas.
+- Fecha o HUD ao sair do personagem.
+- Nao manipula inventario do Ragnarok por arrastar e soltar.
+
+3.2 Map-server
+- A skill 9007 continua sendo o ponto de entrada.
+- Valida funk_master_enable, funk_auction e restricoes de mapa.
+- Emite token curto ligado a account_id, char_id e sessao atual.
+- Envia OPEN_AUCTION somente depois da validacao.
+- Mantem o menu NPC como contingencia para cliente sem suporte.
+
+3.3 Ponte autenticada
+- Canal local ou WebSocket autenticado entre HUD e servidor.
+- Token curto, expiracao, nonce e protecao contra repeticao.
+- Nenhuma credencial SQL deve existir no cliente.
+- O HUD nunca grava diretamente nas tabelas do leilao.
+
+3.4 API funcional
+- Listar e pesquisar leiloes ativos.
+- Consultar saldo e categoria da conta.
+- Consultar inventario negociavel pelo indice real do servidor.
+- Dar lance e comprar agora.
+- Criar e cancelar leilao.
+- Consultar meus lances, meus leiloes e historico.
+- Atualizar preco, vencedor e tempo sem recarregar toda a janela.
+
+4. REGRAS AUTORITATIVAS
+
+- Free: taxa de anuncio de 27% do lance inicial.
+- VIP e superior: taxa de 7% do lance inicial.
+- O map-server calcula e cobra a taxa; o valor mostrado pelo HUD e informativo.
+- Venda concluida preserva o imposto final configurado no servidor.
+- Item, quantidade, refino, cartas, opcoes, vinculo e indice sao revalidados.
+- A criacao usa escrow antes de tornar o leilao visivel.
+- Falhas depois da remocao entram em devolucao segura por RodEx.
+- Cada operacao recebe identificador idempotente para impedir duplicacao.
+
+5. INTEGRACAO DE INVENTARIO
+
+O inventario do HUD deve ser uma copia somente visual enviada pelo servidor.
+Selecionar um item no HUD envia apenas seu inventory_index e unique_id. O
+map-server confirma que a mesma instancia ainda existe antes de remove-la.
+
+Nao deve existir suporte para arrastar um item diretamente da janela de
+inventario do Ragnarok para a janela externa. Esse gesto pertence ao cliente e
+pode ser interpretado como descarte no mapa.
+
+6. ABERTURA E CONTINGENCIA
+
+- Cliente com modulo: receber OPEN_AUCTION, fechar dialogo NPC e abrir o HUD.
+- Cliente sem modulo: usar CustomBlackMarket::OnAuction normalmente.
+- Falha de autenticacao: bloquear botoes de escrita e informar sessao expirada.
+- Falha do HUD: preservar o item e voltar ao menu NPC, sem operacao parcial.
+
+7. FASES
+
+Fase 1 - protocolo de capacidade e OPEN_AUCTION.
+Fase 2 - carregamento automatico do modulo e abertura/fechamento do HUD.
+Fase 3 - sessao autenticada e listagem real somente leitura.
+Fase 4 - saldo, inventario real e taxa correta.
+Fase 5 - lance e compra imediata.
+Fase 6 - criacao com escrow e cancelamento.
+Fase 7 - meus leiloes, meus lances e historico.
+Fase 8 - contingencia, reconexao, idempotencia e testes de falha.
+Fase 9 - remocao integral dos dados demonstrativos.
+
+8. BLOQUEIOS ANTES DE TESTAR VENDA
+
+- Remover todos os itens ficticios do HTML.
+- Desativar Registrar leilao enquanto nao houver sessao real.
+- Desativar arrastar e soltar globalmente no HUD.
+- Mostrar claramente OFFLINE/DEMONSTRACAO sem permitir escrita.
+- Confirmar que o menu NPC antigo foi fechado.
+- Confirmar que o inventario veio do personagem conectado.
+
+9. CRITERIOS DE ACEITE
+
+- Abrir apenas o cliente e usar a skill 9007 abre o leilao.
+- Nenhuma acao manual externa e necessaria.
+- Nenhum menu NPC aparece atras do HUD no modo integrado.
+- O HUD nao apresenta saldo, item ou leilao ficticio.
+- Arrastar item do jogo sobre o HUD nao descarta item no mapa.
+- As taxas exibida e cobrada sao identicas.
+- Reconectar invalida a sessao anterior.
+- Operacao repetida nao duplica item, Zeny ou pagamento.
+- Fechar o HUD nao bloqueia skills nem movimento.
+
+10. ANALISE DA CAPTURA LEILAO.PNG
+
+Evidencias visuais:
+- Rodape mostra Modo demonstracao.
+- Saldo 12.450.000 Z e 18 leiloes ativos sao dados estaticos do prototipo.
+- Maca, Faca [3], Pocao Vermelha, Jellopy, Carta Poring, Ferro e Erva Verde
+  sao o inventario ficticio definido no HTML.
+- A navegacao entre abas funciona porque e JavaScript local.
+- O menu NPC continua visivel atras, no lado esquerdo da janela.
+- O HUD nao possui sessao, inventario ou API reais.
+- O chat registra You dropped Knife [3] (1), seguido de recuperacao do item.
+
+Diagnostico do descarte:
+- A janela externa nao participa do sistema de drag-and-drop do Ragexe.
+- Um arraste iniciado no inventario real continua pertencendo ao jogo.
+- Soltar sobre o HUD nao transfere o item para o formulario.
+- O Ragexe pode interpretar a liberacao como descarte no mapa.
+- O ocorrido nao foi uma tentativa real de venda nem uma operacao de escrow.
+
+Conclusao da captura:
+A interface atual e um prototipo visual navegavel. Ela nao deve ser usada para
+venda, lance ou compra. A venda precisa permanecer bloqueada ate as Fases 3 a 6
+estarem concluidas e o inventario real ser selecionado por clique dentro do HUD.
+================================================================================

@@ -1,0 +1,91 @@
+Header:
+  Type: SKILL_DB
+  Version: 4
+
+Body:
+  - Id: 7000
+    Name: CUSTOM_AREA_LOOT
+    Description: Area Loot
+    MaxLevel: 1
+    TargetType: Self
+    DamageFlags:
+      NoDamage: true
+      Splash: true
+    Hit: Single
+    SplashArea: 2
+  - Id: 7001
+    Name: CUSTOM_MONSTER_READ
+    Description: Monster Reading
+    MaxLevel: 1
+    TargetType: Self
+    DamageFlags:
+      NoDamage: true
+    Range: 9
+    Hit: Single
+  - Id: 7002
+    Name: CUSTOM_UNIVERSAL_CRAFT
+    Description: Universal Craft
+    MaxLevel: 1
+    TargetType: Self
+    DamageFlags:
+      NoDamage: true
+  - Id: 7003
+    Name: CUSTOM_SOCIAL_BASIC
+    Description: Social Basic Package
+    MaxLevel: 1
+  - Id: 7004
+    Name: CUSTOM_RETURN_SAVE
+    Description: Return to Save Point
+    MaxLevel: 2
+    TargetType: Self
+    DamageFlags:
+      NoDamage: true
+    CastCancel: false
+    FixedCastTime: 3000
+    Cooldown:
+      - Level: 1
+        Time: 1800000
+      - Level: 2
+        Time: 900000
+  - Id: 7005
+    Name: CUSTOM_LEAF_WINGS
+    Description: Leaf Wings
+    MaxLevel: 2
+    TargetType: Self
+    DamageFlags:
+      NoDamage: true
+    Cooldown:
+      - Level: 1
+        Time: 1800000
+      - Level: 2
+        Time: 900000
+  - Id: 7006
+    Name: CUSTOM_TAME_CREATURE
+    Description: Tame Creature
+    MaxLevel: 3
+    TargetType: Self
+    DamageFlags:
+      NoDamage: true
+    Range: 8
+  - Id: 7007
+    Name: CUSTOM_BLACK_MARKET
+    Description: Black Market
+    MaxLevel: 1
+    TargetType: Self
+    DamageFlags:
+      NoDamage: true
+
+  - Id: 7008
+    Name: CUSTOM_MONSTER_CATALOG
+    Description: Monster Catalog
+    MaxLevel: 1
+    TargetType: Self
+    DamageFlags:
+      NoDamage: true
+  - Id: 7009
+    Name: CUSTOM_ECOMMERCE
+    Description: Ecommerce
+    MaxLevel: 1
+    TargetType: Self
+    DamageFlags:
+      NoDamage: true

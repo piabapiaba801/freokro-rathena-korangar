@@ -1,0 +1,106 @@
+// Persistent regional boss controller.
+// Configure regions in OnInit. Bosses do not naturally spawn: a configured kill threshold selects
+// one eligible boss at random, excluding the previous boss, and persists the selection/state in SQL.
+-	script	CustomRegionalBoss	-1,{
+OnInit:
+	// Initial production test: Orc Village (gef_fild10).
+	// Every 5 regional monster kills, spawn one of the two Orc MVPs.
+	// The previous MVP cannot be selected again; with a two-entry pool this enforces alternation.
+	.RegionKey$[0] = "orc_village";
+	.AuditDebug = 0; // Set to 1 only for temporary recovery diagnostics.
+	.RegionMap$[0] = "gef_fild10";
+	.Threshold[0] = 5;
+	.TargetRace[0] = -1; // Count every normal regional kill on the map.
+	.Bosses$[0] = "1087,1190"; // Orc Hero, Orc Lord.
+	.RegionCount = 1;
+	for (.@r = 0; .@r < .RegionCount; ++.@r) callsub S_LoadRegion, .@r;
+	end;
+
+S_LoadRegion:
+	.@r = getarg(0);
+	.@rows = query_sql("SELECT `kill_count`,`boss_id`,`boss_alive`,`last_boss_id` FROM `custom_regional_boss_state` WHERE `region_key`='"+.RegionKey$[.@r]+"'", .@kills, .@boss, .@alive, .@last);
+	if (!.@rows) {
+		query_sql("INSERT INTO `custom_regional_boss_state` (`region_key`,`map_name`) VALUES ('"+.RegionKey$[.@r]+"','"+.RegionMap$[.@r]+"')");
+		end;
+	}
+	.RegionKills[.@r] = .@kills;
+	.RegionBoss[.@r] = .@boss;
+	.RegionAlive[.@r] = .@alive;
+	.RegionLast[.@r] = .@last;
+	// Crash/restart recovery: restore the same selected living boss, never reroll it.
+	if (.@alive && .@boss > 0) {
+		monster .RegionMap$[.@r],0,0,"Regional Boss",.@boss,1,"CustomRegionalBoss::OnBossKilled";
+		.@gid = $@mobid[0];
+		if (.@gid > 0 && unitexists(.@gid) && setunitboss(.@gid)) {
+			.RegionGid[.@r] = .@gid;
+			if (.AuditDebug) debugmes sprintf("REGIONAL_BOSS recovery region=%s class=%d gid=%d", .RegionKey$[.@r], .@boss, .@gid);
+		} else {
+			.RegionBoss[.@r] = 0;
+			.RegionAlive[.@r] = 0;
+			query_sql("UPDATE `custom_regional_boss_state` SET `boss_id`=0,`boss_alive`=0 WHERE `region_key`='"+.RegionKey$[.@r]+"'");
+			if (.AuditDebug) debugmes sprintf("REGIONAL_BOSS recovery failed region=%s class=%d", .RegionKey$[.@r], .@boss);
+		}
+	}
+	return;
+
+OnNPCKillEvent:
+	if (!getbattleflag("funk_master_enable") || !getbattleflag("funk_regional_boss")) end;
+	if (!.RegionCount) end;
+	getmapxy(.@map$,.@x,.@y,BL_PC);
+	for (.@r = 0; .@r < .RegionCount; ++.@r) {
+		if (.RegionMap$[.@r] != .@map$) continue;
+		if (.RegionAlive[.@r] && killedrid == .RegionBoss[.@r]) end;
+		if (.TargetRace[.@r] >= 0 && getmonsterinfo(killedrid,MOB_RACE) != .TargetRace[.@r]) end;
+		++.RegionKills[.@r];
+		query_sql("UPDATE `custom_regional_boss_state` SET `kill_count`="+.RegionKills[.@r]+" WHERE `region_key`='"+.RegionKey$[.@r]+"'");
+		if (.RegionKills[.@r] >= .Threshold[.@r] && !.RegionAlive[.@r]) callsub S_SpawnBoss, .@r;
+		end;
+	}
+	end;
+
+S_SpawnBoss:
+	.@r = getarg(0);
+	explode(.@pool$, .Bosses$[.@r], ",");
+	.@count = getarraysize(.@pool$);
+	if (.@count <= 0) return;
+	.@tries = 0;
+	do {
+		.@boss = atoi(.@pool$[rand(.@count)]);
+		++.@tries;
+	} while (.@count > 1 && .@boss == .RegionLast[.@r] && .@tries < 50);
+	// A regional boss tomb lives only until the next regional boss appears.
+	// Clear tombs from every boss in this region's pool immediately before spawn.
+	for (.@i = 0; .@i < .@count; ++.@i)
+		removemvptomb .RegionMap$[.@r], atoi(.@pool$[.@i]);
+	monster .RegionMap$[.@r],0,0,"Regional Boss",.@boss,1,"CustomRegionalBoss::OnBossKilled";
+	.@gid = $@mobid[0];
+	if (.@gid <= 0 || !unitexists(.@gid) || !setunitboss(.@gid)) {
+		debugmes sprintf("REGIONAL_BOSS spawn failed region=%s class=%d gid=%d", .RegionKey$[.@r], .@boss, .@gid);
+		return;
+	}
+	getunitdata .@gid, .@u;
+	.RegionBoss[.@r] = .@boss;
+	.RegionGid[.@r] = .@gid;
+	.RegionAlive[.@r] = 1;
+	.RegionKills[.@r] = 0;
+	query_sql("UPDATE `custom_regional_boss_state` SET `kill_count`=0,`boss_id`="+.@boss+",`boss_alive`=1 WHERE `region_key`='"+.RegionKey$[.@r]+"'");
+	debugmes sprintf("REGIONAL_BOSS spawn region=%s class=%d gid=%d x=%d y=%d", .RegionKey$[.@r], .@boss, .@gid, .@u[UMOB_X], .@u[UMOB_Y]);
+	announce "A regional boss has appeared in "+.RegionMap$[.@r]+" at ("+.@u[UMOB_X]+", "+.@u[UMOB_Y]+")!",bc_all;
+	return;
+
+OnBossKilled:
+	if (!getbattleflag("funk_master_enable") || !getbattleflag("funk_regional_boss")) end;
+	getmapxy(.@map$,.@x,.@y,BL_PC);
+	for (.@r = 0; .@r < .RegionCount; ++.@r) {
+		if (.RegionMap$[.@r] != .@map$ || killedrid != .RegionBoss[.@r]) continue;
+		.RegionLast[.@r] = .RegionBoss[.@r];
+		.RegionBoss[.@r] = 0;
+		.RegionGid[.@r] = 0;
+		.RegionAlive[.@r] = 0;
+		.RegionKills[.@r] = 0;
+		query_sql("UPDATE `custom_regional_boss_state` SET `kill_count`=0,`last_boss_id`="+.RegionLast[.@r]+",`boss_id`=0,`boss_alive`=0 WHERE `region_key`='"+.RegionKey$[.@r]+"'");
+		announce "The regional boss in "+.RegionMap$[.@r]+" has been defeated.",bc_all;
+		end;
+	}
+	end;
+}

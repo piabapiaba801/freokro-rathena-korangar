@@ -1,0 +1,32 @@
+// FreaokRO Custom Auction - Phase 6 server auction administration.
+// @serverauction <item_id> <amount> <start_price> <buy_now|0> <hours> [refine]
+// Group 99 only. Server auctions mint the configured reward and burn winning Zeny.
+-	script	CustomAuctionAdmin	-1,{
+OnInit:
+	bindatcmd("serverauction",strnpcinfo(0)+"::OnCommand",99,99);
+	end;
+
+OnCommand:
+	if(getgroupid()<99) end;
+	if(getarraysize(.@atcmd_parameters$)<5){
+		dispbottom "Uso: @serverauction <item_id> <qtd> <lance_inicial> <comprar_agora|0> <horas> [refine]";
+		dispbottom "Ex.: @serverauction 501 10 100000 500000 24 0";
+		end;
+	}
+	.@item=atoi(.@atcmd_parameters$[0]);
+	.@amount=atoi(.@atcmd_parameters$[1]);
+	.@start=atoi(.@atcmd_parameters$[2]);
+	.@buy=atoi(.@atcmd_parameters$[3]);
+	.@hours=atoi(.@atcmd_parameters$[4]);
+	.@ref=(getarraysize(.@atcmd_parameters$)>=6?atoi(.@atcmd_parameters$[5]):0);
+	if(.@item<=0 || getitemname(.@item)=="null" || .@amount<1 || .@amount>30000 || .@start<1 || .@hours<1 || .@hours>168 || .@ref<0 || .@ref>20){
+		dispbottom "Leilao Especial: parametros invalidos. Duracao permitida: 1-168h."; end;
+	}
+	if(.@buy>0 && .@buy<.@start){ dispbottom "Leilao Especial: Comprar Agora deve ser >= lance inicial."; end; }
+	query_sql("INSERT INTO `custom_auction` (`seller_account_id`,`seller_char_id`,`is_server`,`server_creator_account_id`,`server_creator_char_id`,`server_note`,`item_id`,`amount`,`identify`,`refine`,`start_price`,`buy_now`,`ends_at`,`status`) VALUES (0,0,1,"+getcharid(3)+","+getcharid(0)+",'Criado por "+escape_sql(strcharinfo(0))+"',"+.@item+","+.@amount+",1,"+.@ref+","+.@start+","+.@buy+",DATE_ADD(NOW(),INTERVAL "+.@hours+" HOUR),'ACTIVE')"); .@ok=callfunc("F_AuctionSqlRows");
+	if(.@ok<=0){ dispbottom "Leilao Especial: falha ao persistir no SQL."; end; }
+	query_sql("SELECT LAST_INSERT_ID()",.@aid);
+	query_sql("INSERT INTO `custom_auction_admin_log` (`auction_id`,`account_id`,`char_id`,`char_name`,`action`,`details`) VALUES ("+.@aid+","+getcharid(3)+","+getcharid(0)+",'"+escape_sql(strcharinfo(0))+"','CREATE','item="+.@item+" amount="+.@amount+" start="+.@start+" buy="+.@buy+" hours="+.@hours+" refine="+.@ref+"')");
+	dispbottom "Leilao Especial #"+.@aid+" criado: "+getitemname(.@item)+" x"+.@amount+" por "+.@hours+"h.";
+	end;
+}

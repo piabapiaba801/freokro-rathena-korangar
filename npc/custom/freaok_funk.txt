@@ -1,0 +1,52 @@
+-	script	FreaokFunk	-1,{
+end;
+OnOpen:
+	if (getgroupid() < 99) { dispbottom "[FUNK] Acesso restrito a administracao."; end; }
+	mes "[ FreaokRO FUNK ]";
+	mes "Central de emergencia server-side.";
+	mes "OFF bloqueia a logica do servidor; elementos puramente client-side podem continuar visiveis.";
+	next;
+	.@keys$[0]="master"; .@names$[0]="MASTER - todas customizacoes";
+	.@keys$[1]="marketclone"; .@names$[1]="Market Clone / Offline Vending";
+	.@keys$[2]="extendedvending"; .@names$[2]="Extended Vending / moedas";
+	.@keys$[3]="randomoptions"; .@names$[3]="Random Options on Acquire";
+	.@keys$[4]="preserve"; .@names$[4]="Preserve Toggle";
+	.@keys$[5]="gearprotect"; .@names$[5]="GearProtect";
+	.@keys$[6]="partysynergy"; .@names$[6]="Party Job Synergy";
+	.@keys$[7]="mvptomb"; .@names$[7]="MVP Tomb Extended";
+	.@keys$[8]="regionalboss"; .@names$[8]="Regional Boss";
+	.@keys$[9]="basicskills"; .@names$[9]="Basic Skills custom";
+	.@keys$[10]="champion"; .@names$[10]="Champion Monsters";
+	.@keys$[11]="serverguard"; .@names$[11]="ServerGuard";
+	.@keys$[12]="voice"; .@names$[12]="Voice Chat bridge";
+	.@keys$[13]="cardlog"; .@names$[13]="Card Drop Log/Announcement";
+	.@keys$[14]="skillcritical"; .@names$[14]="Global Skill Critical";
+	.@keys$[15]="rentalcard"; .@names$[15]="Rental Card Return";
+	.@keys$[16]="welcome"; .@names$[16]="Welcome/MOTD custom";
+	.@keys$[17]="autoattack"; .@names$[17]="AutoAttack";
+	.@keys$[18]="durability"; .@names$[18]="Durability";
+	.@keys$[19]="catalog"; .@names$[19]="Monster Identification/Catalog";
+	.@keys$[20]="catalogxp"; .@names$[20]="Catalog EXP payment only";
+	.@keys$[21]="auction"; .@names$[21]="Auction / Leiloes";
+	.@keys$[22]="arealoot"; .@names$[22]="Coleta em Area";
+	.@keys$[23]="monsterread"; .@names$[23]="Olhar do Cacador";
+	.@keys$[24]="craft"; .@names$[24]="Oficio Universal";
+	.@keys$[25]="returnsave"; .@names$[25]="Retorno ao Ponto Salvo";
+	.@keys$[26]="tame"; .@names$[26]="Domar Criatura";
+	.@keys$[27]="ecommerce"; .@names$[27]="Ecommerce / Busca de Lojas";
+	.@keys$[28]="leafwings"; .@names$[28]="Asa de Leaf";
+	.@menu$="";
+	for (.@i=0; .@i<getarraysize(.@keys$); .@i++) .@menu$ += .@names$[.@i] + ":";
+	.@sel=select(.@menu$)-1;
+	mes "[ FreaokRO FUNK ]";
+	mes .@names$[.@sel];
+	next;
+	.@act=select("ON:OFF:Cancelar");
+	if (.@act==3) close;
+	atcommand "@funkctl "+.@keys$[.@sel]+(.@act==1?" on":" off");
+	mes "Alteracao aplicada em runtime no map-server.";
+	mes "Nao e necessario reiniciar Login/Char/Map.";
+	mes "Sistemas com estado ativo sao reconciliados automaticamente.";
+	mes "Use @Funk novamente para outro sistema.";
+	close;
+}

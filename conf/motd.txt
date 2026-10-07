@@ -1,0 +1,38 @@
+============================================================
+                    BEM-VINDO AO FreokiRO!
+============================================================
+
+Seja bem-vindo, aventureiro! Esperamos que sua jornada por
+FreokiRO seja repleta de descobertas, desafios e conquistas.
+
+[ TAXAS ATUAIS DO SERVIDOR ]
+Base EXP: 1x
+Job EXP: 1x
+Drops: 1x
+Penalidade ao morrer: 1% da Base EXP e 1% da Job EXP
+
+[ DESTAQUES DO FreokiRO ]
+- Champion Monsters: inimigos especiais com tipos e bonus unicos.
+- Regional Bosses: chefes especiais ativados pela caca no mapa.
+- Random Options: equipamentos elegiveis podem receber ate 5 opcoes.
+- Party Job Synergy: composicoes de classes concedem bonus ao grupo.
+- Global Skill Critical: skills de dano de players podem causar critico.
+- MVP Tomb Extended: historico e estatisticas ampliadas de MVPs.
+- Mercado das Sombras e recursos personalizados de comercio.
+- Protecao de equipamentos contra vendas acidentais a NPCs.
+- Rental Card Return: cartas sao protegidas quando rentals expiram.
+- Sistema de anuncio e registro de cartas de monstros e Champions.
+- Arvore de habilidades basicas e recursos exclusivos do FreokiRO.
+
+[ COMANDOS ]
+O FreokiRO possui comandos proprios para auxiliar sua aventura.
+Use @commands para verificar os comandos disponiveis no momento.
+
+AVISO DE DESENVOLVIMENTO:
+Alguns recursos atualmente acessados por comandos serao migrados
+para interfaces e itens proprios. O AutoAttack, por exemplo, sera
+posteriormente ativado por item e tera uma HUD dedicada.
+
+Bom jogo e boa jornada!
+Equipe FreokiRO
+============================================================

@@ -1,0 +1,41 @@
+// FreaokRO - Monster Catalog (temporary server-side UI for Basic Skill #9)
+// Knowledge is account-wide. No physical NPC is spawned; the skill calls OnOpen remotely.
+
+-	script	FreaokMonsterCatalog	-1,{
+OnOpen:
+	if (!getbattleflag("funk_master_enable") || !getbattleflag("funk_basic_skills") || !getbattleflag("funk_monster_catalog")) {
+		dispbottom "[FUNK] Identificacao/Catalogo temporariamente desativado.";
+		end;
+	}
+	.@aid = getcharid(3);
+	query_sql("SELECT COUNT(*) FROM `monster_catalog` WHERE `account_id`="+.@aid, .@total);
+	query_sql("SELECT COUNT(*) FROM `monster_catalog` WHERE `account_id`="+.@aid+" AND `category`=0", .@normal);
+	query_sql("SELECT COUNT(*) FROM `monster_catalog` WHERE `account_id`="+.@aid+" AND `category`=1", .@mini);
+	query_sql("SELECT COUNT(*) FROM `monster_catalog` WHERE `account_id`="+.@aid+" AND `category`=2", .@mvp);
+L_Main:
+	mes "[Catalogo de Monstros]";
+	mes "Especies identificadas: ^00AAFF"+.@total+"^000000";
+	mes "Normais: "+.@normal+"  |  Mini-Chefes: "+.@mini+"  |  MVPs: "+.@mvp;
+	next;
+	switch(select("Ultimas descobertas:Normais:Mini-Chefes:MVPs:Fechar")) {
+	case 1: .@cat = -1; break;
+	case 2: .@cat = 0; break;
+	case 3: .@cat = 1; break;
+	case 4: .@cat = 2; break;
+	default: close;
+	}
+	if (.@cat < 0)
+		.@n = query_sql("SELECT `mob_id` FROM `monster_catalog` WHERE `account_id`="+.@aid+" ORDER BY `discovered_at` DESC LIMIT 50", .@mobid);
+	else
+		.@n = query_sql("SELECT `mob_id` FROM `monster_catalog` WHERE `account_id`="+.@aid+" AND `category`="+.@cat+" ORDER BY `discovered_at` DESC LIMIT 50", .@mobid);
+	mes "[Catalogo de Monstros]";
+	if (!.@n) {
+		mes "Nenhuma especie identificada nesta categoria.";
+		next;
+		goto L_Main;
+	}
+	for (.@i = 0; .@i < .@n; ++.@i)
+		mes "^00AAFF"+getmonsterinfo(.@mobid[.@i], MOB_NAME)+"^000000  (ID "+.@mobid[.@i]+")";
+	next;
+	goto L_Main;
+}

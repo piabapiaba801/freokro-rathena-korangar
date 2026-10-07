@@ -1,0 +1,83 @@
+FREOKRO - PASSO A PASSO SQL PARA SUBIR O AMBIENTE
+Checkpoint: FreaokRO V15 / EP19 + Custom Auction Phase 7
+
+ANTES DE IMPORTAR
+1. Faca backup do banco atual (login/char/map conforme sua instalacao).
+2. Pare login-server, char-server e map-server durante alteracoes estruturais.
+3. Confirme que esta apontando para o banco principal correto do rAthena.
+4. Use MySQL/MariaDB compativel com a base rAthena e tabelas InnoDB.
+
+CENARIO A - BANCO NOVO / INSTALACAO NOVA
+1. Importe primeiro os SQL oficiais/base do rAthena exigidos pela sua arvore (main/log/web, conforme a configuracao usada no servidor).
+2. Depois importe UMA VEZ:
+   sql-files/custom_project.sql
+3. Esse arquivo consolidado ja contem as estruturas customizadas atuais, incluindo Black Market, Durability, Market Clone, catalogo e Custom Auction ate a estrutura presente neste checkpoint.
+4. Para uma instalacao nova que acabou de receber custom_project.sql deste pacote, NAO reaplique em seguida os upgrades historicos do Auction apenas por rotina; eles existem principalmente para bancos antigos.
+
+CENARIO B - BANCO FREOKRO ANTIGO JA EM PRODUCAO
+Execute os upgrades que ainda nao foram aplicados, nesta ordem logica:
+1. sql-files/upgrades/upgrade_black_market_daily_quota.sql
+2. sql-files/upgrades/upgrade_black_market_custom_auction.sql
+3. sql-files/upgrades/upgrade_custom_auction_phase5.sql
+4. sql-files/upgrades/upgrade_custom_auction_phase6.sql
+5. sql-files/upgrades/upgrade_custom_auction_phase7.sql
+
+ATENCAO
+- upgrade_black_market_custom_auction.sql ja incorpora partes das Fases 2-5. Em um banco onde esse arquivo atual ja foi aplicado por completo, o upgrade da Phase 5 e redundante, mas usa ADD COLUMN IF NOT EXISTS e e tolerante.
+- upgrade_custom_auction_phase6.sql usa ADD COLUMN sem IF NOT EXISTS. NAO execute Phase 6 duas vezes no mesmo banco, pois a segunda execucao pode falhar com coluna duplicada.
+- Antes de executar upgrades em producao, confira SHOW COLUMNS/SHOW TABLES ou mantenha uma tabela/registro de migracoes aplicadas.
+
+EXEMPLO VIA TERMINAL
+mysql -u SEU_USUARIO -p NOME_DO_BANCO < sql-files/custom_project.sql
+
+Para upgrade existente, troque o arquivo pelo upgrade correspondente e execute na ordem acima.
+
+VALIDACAO APOS IMPORTACAO
+Confirme a existencia das tabelas:
+- custom_black_market_stock
+- custom_black_market_quota
+- custom_black_market_log
+- custom_auction
+- custom_auction_bid
+- custom_auction_history
+- custom_auction_wallet
+- custom_auction_admin_log
+
+Confirme tambem as colunas customizadas de Durability nas tabelas relevantes, especialmente:
+- inventory.durability
+- cart_inventory.durability
+- storage.durability
+- guild_storage.durability
+- mail_attachments.durability
+- auction.durability
+
+No Custom Auction, confira pelo menos:
+- custom_auction.status aceita ESCROW_PENDING, ACTIVE, SETTLEMENT_PENDING, CANCEL_PENDING, SOLD, EXPIRED, CANCELLED.
+- custom_auction possui listing_fee e os campos server_creator_* / server_note.
+- custom_auction_history possui sale_tax e seller_net.
+- custom_auction_wallet possui refund_char_id e refund_char_name.
+
+ORDEM PARA SUBIR O SERVIDOR DEPOIS DO SQL
+1. Compile/instale os binarios correspondentes a ESTE MESMO source.
+2. Revise conf/import/battle_conf.txt e demais imports customizados.
+3. Inicie login-server.
+4. Inicie char-server.
+5. Inicie map-server.
+6. Observe o console/log SQL por erro de coluna/tabela ausente.
+7. Entre com conta de teste antes de liberar jogadores.
+
+TESTE MINIMO DO AUCTION
+1. Verifique FUNK master e FUNK auction ligados.
+2. Conta A cria leilao de item descartavel de teste.
+3. Conta A tenta dar lance/comprar o proprio item: deve ser bloqueada.
+4. Conta B da lance.
+5. Conta C supera o lance; valide refund persistente da conta B.
+6. Teste Buy Now em outro leilao.
+7. Teste expiracao sem lance e retorno por RodEx.
+8. Teste venda concluida e pagamento liquido de 97% ao vendedor.
+9. Grupo 99 testa @serverauction e confirma o Zeny sink.
+10. Grupo 99 testa @auctioninspect e @auctionaudit.
+11. Somente depois desses testes libere o sistema em producao.
+
+IMPORTANTE
+Faca primeiro tudo em uma copia/staging do banco. Nao use um banco de producao como primeiro teste de migracao.

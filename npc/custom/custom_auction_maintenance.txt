@@ -1,0 +1,48 @@
+// FreaokRO Custom Auction - Phase 7 administration / maintenance.
+// Group 99 only. Destructive actions are logged and settlement remains worker-driven.
+-	script	CustomAuctionMaintenance	-1,{
+OnInit:
+	bindatcmd("auctioninspect",strnpcinfo(0)+"::OnInspect",99,99);
+	bindatcmd("auctioncancel",strnpcinfo(0)+"::OnCancel",99,99);
+	bindatcmd("auctionrecover",strnpcinfo(0)+"::OnRecover",99,99);
+	bindatcmd("auctionaudit",strnpcinfo(0)+"::OnAudit",99,99);
+	end;
+OnInspect:
+	if(getarraysize(.@atcmd_parameters$)<1){ dispbottom "Uso: @auctioninspect <auction_id>"; end; }
+	.@id=atoi(.@atcmd_parameters$[0]);
+	.@n=query_sql("SELECT `status`,`item_id`,`amount`,`seller_account_id`,`seller_char_id`,`highest_bidder_account_id`,`current_bid`,`buy_now`,UNIX_TIMESTAMP(`ends_at`),`settlement_reason`,`is_server` FROM `custom_auction` WHERE `auction_id`="+.@id+" LIMIT 1",.@st$,.@iid,.@amt,.@sa,.@sc,.@ba,.@bid,.@buy,.@end,.@reason$,.@srv);
+	if(.@n<=0){ dispbottom "Auction #"+.@id+": inexistente."; end; }
+	dispbottom "Auction #"+.@id+" ["+.@st$+"] item="+.@iid+" x"+.@amt+" seller_acc="+.@sa+" bidder_acc="+.@ba+" bid="+.@bid+" buy="+.@buy+" server="+.@srv;
+	dispbottom "ends_at(unix)="+.@end+" reason="+.@reason$;
+	end;
+OnCancel:
+	if(getarraysize(.@atcmd_parameters$)<1){ dispbottom "Uso: @auctioncancel <auction_id> [motivo]"; end; }
+	.@id=atoi(.@atcmd_parameters$[0]); .@reason$=(getarraysize(.@atcmd_parameters$)>=2?.@atcmd_parameters$[1]:"admin");
+	query_sql("UPDATE `custom_auction` SET `status`='CANCEL_PENDING',`settlement_reason`='ADMIN_CANCEL' WHERE `auction_id`="+.@id+" AND `status`='ACTIVE'"); .@ok=callfunc("F_AuctionSqlRows");
+	if(.@ok<=0){ dispbottom "Cancelamento recusado: somente leilao ACTIVE pode ser cancelado."; end; }
+	query_sql("INSERT INTO `custom_auction_admin_log` (`auction_id`,`account_id`,`char_id`,`char_name`,`action`,`details`) VALUES ("+.@id+","+getcharid(3)+","+getcharid(0)+",'"+escape_sql(strcharinfo(0))+"','CANCEL','"+escape_sql(.@reason$)+"')");
+	donpcevent "CustomAuctionSettlement::OnAuctionSettlement";
+	dispbottom "Auction #"+.@id+" enviado para cancelamento seguro. Item/lance serao devolvidos pelo settlement.";
+	end;
+OnRecover:
+	// Recovery is deliberately conservative: only retrigger idempotent settlement/refund workers.
+	// ESCROW_PENDING is never guessed because inventory removal may not have completed.
+	donpcevent "CustomAuctionSettlement::OnAuctionSettlement";
+	donpcevent "CustomAuctionSettlement::OnAuctionRefunds";
+	query_sql("INSERT INTO `custom_auction_admin_log` (`auction_id`,`account_id`,`char_id`,`char_name`,`action`,`details`) VALUES (0,"+getcharid(3)+","+getcharid(0)+",'"+escape_sql(strcharinfo(0))+"','RECOVER','manual worker retry')");
+	dispbottom "Auction recovery: settlement/refund workers reexecutados. ESCROW_PENDING exige inspecao manual.";
+	end;
+OnAudit:
+	.@active=0;.@cancel=0;.@settle=0;.@escrow=0;.@wallet=0;.@stale=0;.@self=0;.@badprice=0;
+	query_sql("SELECT COUNT(*) FROM `custom_auction` WHERE `status`='ACTIVE'",.@active);
+	query_sql("SELECT COUNT(*) FROM `custom_auction` WHERE `status`='CANCEL_PENDING'",.@cancel);
+	query_sql("SELECT COUNT(*) FROM `custom_auction` WHERE `status`='SETTLEMENT_PENDING'",.@settle);
+	query_sql("SELECT COUNT(*) FROM `custom_auction` WHERE `status`='ESCROW_PENDING' AND `created_at`<DATE_SUB(NOW(),INTERVAL 5 MINUTE)",.@escrow);
+	query_sql("SELECT COUNT(*) FROM `custom_auction` WHERE `status` IN ('SETTLEMENT_PENDING','CANCEL_PENDING') AND COALESCE(`ended_at`,`ends_at`)<DATE_SUB(NOW(),INTERVAL 5 MINUTE)",.@stale);
+	query_sql("SELECT COUNT(*) FROM `custom_auction` WHERE `seller_account_id`>0 AND `seller_account_id`=`highest_bidder_account_id`",.@self);
+	query_sql("SELECT COUNT(*) FROM `custom_auction` WHERE `start_price`<1 OR `current_bid`<0 OR `buy_now`<0 OR (`buy_now`>0 AND `buy_now`<=`start_price`)",.@badprice);
+	query_sql("SELECT COUNT(*) FROM `custom_auction_wallet` WHERE `balance`>0",.@wallet);
+	dispbottom "Auction audit: ACTIVE="+.@active+" CANCEL_PENDING="+.@cancel+" SETTLEMENT_PENDING="+.@settle+" ESCROW_PENDING>5m="+.@escrow+" wallets="+.@wallet;
+	dispbottom "Hardening: pending>5m="+.@stale+" self_bid="+.@self+" invalid_price="+.@badprice;
+	end;
+}

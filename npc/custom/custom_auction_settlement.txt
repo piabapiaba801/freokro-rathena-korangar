@@ -1,0 +1,113 @@
+// FreaokRO Custom Auction - Phase 4 persistent settlement worker.
+// query_sql() returns rows only for SELECT. DML results must be read explicitly.
+function	script	F_AuctionSqlRows	{
+	.@rows=0;
+	query_sql("SELECT ROW_COUNT()",.@rows);
+	return .@rows;
+}
+
+-	script	CustomAuctionSettlement	-1,{
+// ---------------------------------------------------------------------------
+// Phase 4 - persistent settlement worker.
+// SQL is the source of truth. Mail, attachment, history and final state commit
+// together. Crash before COMMIT rolls back; crash after COMMIT is already final.
+OnInit:
+	initnpctimer;
+	donpcevent "CustomAuctionSettlement::OnAuctionSettlement";
+	end;
+
+OnTimer2000:
+	donpcevent "CustomAuctionSettlement::OnAuctionSettlement";
+	donpcevent "CustomAuctionSettlement::OnAuctionRefunds";
+	setnpctimer 0;
+	end;
+
+OnAuctionSettlement:
+	.@n=query_sql("SELECT `auction_id` FROM `custom_auction` WHERE (`status` IN ('SETTLEMENT_PENDING','CANCEL_PENDING') OR (`status`='ACTIVE' AND `ends_at`<=NOW())) ORDER BY `ends_at` LIMIT 10",.@todo);
+	for(.@x=0;.@x<.@n;.@x++) {
+		query_sql("START TRANSACTION");
+		.@ok=query_sql("SELECT `item_id`,`amount`,`identify`,`refine`,`attribute`,`bound`,`unique_id`,`enchantgrade`,`durability`,`card0`,`card1`,`card2`,`card3`,`opt_id0`,`opt_val0`,`opt_par0`,`opt_id1`,`opt_val1`,`opt_par1`,`opt_id2`,`opt_val2`,`opt_par2`,`opt_id3`,`opt_val3`,`opt_par3`,`opt_id4`,`opt_val4`,`opt_par4`,`seller_char_id`,`highest_bidder_char_id`,`highest_bidder_account_id`,`highest_bidder_name`,`current_bid`,`is_server`,`status` FROM `custom_auction` WHERE `auction_id`="+.@todo[.@x]+" AND (`status` IN ('SETTLEMENT_PENDING','CANCEL_PENDING') OR (`status`='ACTIVE' AND `ends_at`<=NOW())) FOR UPDATE",.@iid,.@amt,.@identify,.@ref,.@attr,.@bound,.@uid,.@grade,.@dura,.@c0,.@c1,.@c2,.@c3,.@o0,.@v0,.@p0,.@o1,.@v1,.@p1,.@o2,.@v2,.@p2,.@o3,.@v3,.@p3,.@o4,.@v4,.@p4,.@seller_char,.@buyer_char,.@buyer_acc,.@buyer_name$,.@price,.@is_server,.@st$);
+		if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+		// Phase 7: administrative cancellation is settled by the same persistent worker.
+		// Refund the current leader and return the escrowed item; never execute a sale.
+		if(.@st$=="CANCEL_PENDING") {
+			if(.@buyer_acc>0 && .@price>0) {
+				query_sql("INSERT INTO `custom_auction_wallet` (`account_id`,`balance`,`refund_char_id`,`refund_char_name`) VALUES ("+.@buyer_acc+","+.@price+","+.@buyer_char+",'"+escape_sql(.@buyer_name$)+"') ON DUPLICATE KEY UPDATE `balance`=`balance`+VALUES(`balance`),`refund_char_id`=VALUES(`refund_char_id`),`refund_char_name`=VALUES(`refund_char_name`),`updated_at`=CURRENT_TIMESTAMP"); .@ok=callfunc("F_AuctionSqlRows");
+				if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+			}
+			if(!.@is_server) {
+				.@seller_name$=""; if(.@seller_char>0) query_sql("SELECT `name` FROM `char` WHERE `char_id`="+.@seller_char+" LIMIT 1",.@seller_name$);
+				if(.@seller_char<=0 || .@seller_name$==""){ query_sql("ROLLBACK"); continue; }
+				query_sql("INSERT INTO `mail` (`send_name`,`send_id`,`dest_name`,`dest_id`,`title`,`message`,`time`,`status`,`zeny`,`type`) VALUES ('FreokRO Auction',0,'"+escape_sql(.@seller_name$)+"',"+.@seller_char+",'Leilao #"+.@todo[.@x]+" - Cancelado','Cancelamento administrativo. Seu item foi devolvido.',UNIX_TIMESTAMP(),0,0,0)"); .@ok=callfunc("F_AuctionSqlRows");
+				if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+				query_sql("SELECT LAST_INSERT_ID()",.@mail_id);
+				query_sql("INSERT INTO `mail_attachments` (`id`,`index`,`nameid`,`amount`,`refine`,`attribute`,`identify`,`card0`,`card1`,`card2`,`card3`,`option_id0`,`option_val0`,`option_parm0`,`option_id1`,`option_val1`,`option_parm1`,`option_id2`,`option_val2`,`option_parm2`,`option_id3`,`option_val3`,`option_parm3`,`option_id4`,`option_val4`,`option_parm4`,`unique_id`,`bound`,`enchantgrade`,`durability`) VALUES ("+.@mail_id+",0,"+.@iid+","+.@amt+","+.@ref+","+.@attr+","+.@identify+","+.@c0+","+.@c1+","+.@c2+","+.@c3+","+.@o0+","+.@v0+","+.@p0+","+.@o1+","+.@v1+","+.@p1+","+.@o2+","+.@v2+","+.@p2+","+.@o3+","+.@v3+","+.@p3+","+.@o4+","+.@v4+","+.@p4+","+.@uid+","+.@bound+","+.@grade+","+.@dura+")"); .@ok=callfunc("F_AuctionSqlRows");
+				if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+			}
+			query_sql("UPDATE `custom_auction` SET `status`='CANCELLED',`ended_at`=NOW(),`settlement_reason`='ADMIN_CANCEL' WHERE `auction_id`="+.@todo[.@x]+" AND `status`='CANCEL_PENDING'"); .@ok=callfunc("F_AuctionSqlRows");
+			if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+			query_sql("COMMIT");
+			continue;
+		}
+		.@has_buyer=(.@buyer_char>0 && .@buyer_acc>0 && .@price>0);
+		if(.@has_buyer) {
+			.@seller_name$=""; .@buyer_db_name$="";
+			if(.@seller_char>0) query_sql("SELECT `name` FROM `char` WHERE `char_id`="+.@seller_char+" LIMIT 1",.@seller_name$);
+			query_sql("SELECT `name` FROM `char` WHERE `char_id`="+.@buyer_char+" LIMIT 1",.@buyer_db_name$);
+			if(.@buyer_db_name$=="") .@buyer_db_name$=.@buyer_name$;
+			if(.@buyer_db_name$==""){ query_sql("ROLLBACK"); continue; }
+			query_sql("INSERT INTO `mail` (`send_name`,`send_id`,`dest_name`,`dest_id`,`title`,`message`,`time`,`status`,`zeny`,`type`) VALUES ('FreokRO Auction',0,'"+escape_sql(.@buyer_db_name$)+"',"+.@buyer_char+",'Leilao #"+.@todo[.@x]+" - Item','Seu item do leilao foi entregue.',UNIX_TIMESTAMP(),0,0,0)"); .@ok=callfunc("F_AuctionSqlRows");
+			if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+			query_sql("SELECT LAST_INSERT_ID()",.@mail_id);
+			query_sql("INSERT INTO `mail_attachments` (`id`,`index`,`nameid`,`amount`,`refine`,`attribute`,`identify`,`card0`,`card1`,`card2`,`card3`,`option_id0`,`option_val0`,`option_parm0`,`option_id1`,`option_val1`,`option_parm1`,`option_id2`,`option_val2`,`option_parm2`,`option_id3`,`option_val3`,`option_parm3`,`option_id4`,`option_val4`,`option_parm4`,`unique_id`,`bound`,`enchantgrade`,`durability`) VALUES ("+.@mail_id+",0,"+.@iid+","+.@amt+","+.@ref+","+.@attr+","+.@identify+","+.@c0+","+.@c1+","+.@c2+","+.@c3+","+.@o0+","+.@v0+","+.@p0+","+.@o1+","+.@v1+","+.@p1+","+.@o2+","+.@v2+","+.@p2+","+.@o3+","+.@v3+","+.@p3+","+.@o4+","+.@v4+","+.@p4+","+.@uid+","+.@bound+","+.@grade+","+.@dura+")"); .@ok=callfunc("F_AuctionSqlRows");
+			if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+			// Phase 5: 3% sale tax.
+			.@sale_tax=(.@is_server ? 0 : (.@price*3)/100);
+			.@seller_net=.@price-.@sale_tax;
+			if(!.@is_server && .@seller_char>0 && .@seller_name$!="") {
+				query_sql("INSERT INTO `mail` (`send_name`,`send_id`,`dest_name`,`dest_id`,`title`,`message`,`time`,`status`,`zeny`,`type`) VALUES ('FreokRO Auction',0,'"+escape_sql(.@seller_name$)+"',"+.@seller_char+",'Leilao #"+.@todo[.@x]+" - Venda','Pagamento da venda concluida.',UNIX_TIMESTAMP(),0,"+.@seller_net+",0)"); .@ok=callfunc("F_AuctionSqlRows");
+				if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+			}
+			query_sql("INSERT IGNORE INTO `custom_auction_history` (`auction_id`,`item_id`,`amount`,`refine`,`enchantgrade`,`seller_char_id`,`buyer_char_id`,`final_price`,`sale_tax`,`seller_net`,`is_server`) VALUES ("+.@todo[.@x]+","+.@iid+","+.@amt+","+.@ref+","+.@grade+","+.@seller_char+","+.@buyer_char+","+.@price+","+.@sale_tax+","+.@seller_net+","+.@is_server+")"); .@ok=callfunc("F_AuctionSqlRows");
+			if(.@ok<0){ query_sql("ROLLBACK"); continue; }
+			query_sql("UPDATE `custom_auction` SET `status`='SOLD',`ended_at`=IFNULL(`ended_at`,NOW()),`settlement_reason`=IF(`settlement_reason`='', 'WINNING_BID', `settlement_reason`) WHERE `auction_id`="+.@todo[.@x]+" AND `status` IN ('ACTIVE','SETTLEMENT_PENDING')"); .@ok=callfunc("F_AuctionSqlRows");
+			if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+		} else {
+			// Server auctions have no seller/item to return. Expire them atomically.
+			if(.@is_server){
+				query_sql("UPDATE `custom_auction` SET `status`='EXPIRED',`ended_at`=NOW(),`settlement_reason`='NO_BID' WHERE `auction_id`="+.@todo[.@x]+" AND `status`='ACTIVE'"); .@ok=callfunc("F_AuctionSqlRows");
+				if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+				query_sql("COMMIT");
+				continue;
+			}
+			.@seller_name$=""; if(.@seller_char>0) query_sql("SELECT `name` FROM `char` WHERE `char_id`="+.@seller_char+" LIMIT 1",.@seller_name$);
+			if(.@seller_char<=0 || .@seller_name$==""){ query_sql("ROLLBACK"); continue; }
+			query_sql("INSERT INTO `mail` (`send_name`,`send_id`,`dest_name`,`dest_id`,`title`,`message`,`time`,`status`,`zeny`,`type`) VALUES ('FreokRO Auction',0,'"+escape_sql(.@seller_name$)+"',"+.@seller_char+",'Leilao #"+.@todo[.@x]+" - Expirado','Nao houve comprador. Seu item foi devolvido.',UNIX_TIMESTAMP(),0,0,0)"); .@ok=callfunc("F_AuctionSqlRows");
+			if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+			query_sql("SELECT LAST_INSERT_ID()",.@mail_id);
+			query_sql("INSERT INTO `mail_attachments` (`id`,`index`,`nameid`,`amount`,`refine`,`attribute`,`identify`,`card0`,`card1`,`card2`,`card3`,`option_id0`,`option_val0`,`option_parm0`,`option_id1`,`option_val1`,`option_parm1`,`option_id2`,`option_val2`,`option_parm2`,`option_id3`,`option_val3`,`option_parm3`,`option_id4`,`option_val4`,`option_parm4`,`unique_id`,`bound`,`enchantgrade`,`durability`) VALUES ("+.@mail_id+",0,"+.@iid+","+.@amt+","+.@ref+","+.@attr+","+.@identify+","+.@c0+","+.@c1+","+.@c2+","+.@c3+","+.@o0+","+.@v0+","+.@p0+","+.@o1+","+.@v1+","+.@p1+","+.@o2+","+.@v2+","+.@p2+","+.@o3+","+.@v3+","+.@p3+","+.@o4+","+.@v4+","+.@p4+","+.@uid+","+.@bound+","+.@grade+","+.@dura+")"); .@ok=callfunc("F_AuctionSqlRows");
+			if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+			query_sql("UPDATE `custom_auction` SET `status`='EXPIRED',`ended_at`=NOW(),`settlement_reason`='NO_BID' WHERE `auction_id`="+.@todo[.@x]+" AND `status`='ACTIVE'"); .@ok=callfunc("F_AuctionSqlRows");
+			if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+		}
+		query_sql("COMMIT");
+	}
+	end;
+
+OnAuctionRefunds:
+	.@n=query_sql("SELECT `account_id` FROM `custom_auction_wallet` WHERE `balance`>0 AND `refund_char_id`>0 ORDER BY `updated_at` LIMIT 10",.@acc);
+	for(.@x=0;.@x<.@n;.@x++) {
+		query_sql("START TRANSACTION");
+		.@ok=query_sql("SELECT `balance`,`refund_char_id`,`refund_char_name` FROM `custom_auction_wallet` WHERE `account_id`="+.@acc[.@x]+" AND `balance`>0 FOR UPDATE",.@bal,.@cid,.@cname$);
+		if(.@ok<=0 || .@bal<=0 || .@cid<=0){ query_sql("ROLLBACK"); continue; }
+		if(.@cname$=="") query_sql("SELECT `name` FROM `char` WHERE `char_id`="+.@cid+" LIMIT 1",.@cname$);
+		if(.@cname$==""){ query_sql("ROLLBACK"); continue; }
+		query_sql("INSERT INTO `mail` (`send_name`,`send_id`,`dest_name`,`dest_id`,`title`,`message`,`time`,`status`,`zeny`,`type`) VALUES ('FreokRO Auction',0,'"+escape_sql(.@cname$)+"',"+.@cid+",'Reembolso de Leilao','Seu lance superado foi devolvido.',UNIX_TIMESTAMP(),0,"+.@bal+",0)"); .@ok=callfunc("F_AuctionSqlRows");
+		if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+		query_sql("UPDATE `custom_auction_wallet` SET `balance`=0 WHERE `account_id`="+.@acc[.@x]+" AND `balance`="+.@bal); .@ok=callfunc("F_AuctionSqlRows");
+		if(.@ok<=0){ query_sql("ROLLBACK"); continue; }
+		query_sql("COMMIT");
+	}
+	end;
+
+}

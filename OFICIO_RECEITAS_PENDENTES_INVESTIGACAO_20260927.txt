@@ -1,0 +1,19 @@
+OFICIO UNIVERSAL - RECEITAS RETIRADAS PARA INVESTIGACAO
+Data: 2026-09-27
+
+Criterio
+- Produto confirmado visualmente com a janela de materiais vazia no cliente 2025-07-16.
+- A receita continua existente no servidor e nao foi apagada do produce_db.
+- O produto fica oculto somente da lista da skill customizada Oficio Universal ate a compatibilidade do cliente ser resolvida.
+
+1. Evil Bone Wand / Cajado de Osso Maligno
+- Product ID: 1615
+- Produce DB row: 218
+- Item level/category: 26
+- Required skill: 2494, level 1
+- Server recipe: 100 x Skel-Bone (ID 7752) + 100 x Bat Teeth (ID 7753)
+- Evidence: the client opens "Evil Bone Wand Create", but displays no materials and the request cannot complete.
+- Status: removed from the Oficio Universal browser; pending client-side recipe investigation.
+
+Observacao
+Sword and other recipes that display their materials remain enabled. Add new confirmed empty recipes to this file and to universal_unsupported_products in src/map/clif.cpp.

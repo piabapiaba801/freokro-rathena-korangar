@@ -1,0 +1,29 @@
+FREOKRO V19 - NOVICE BASIC SKILLS RESTORE
+
+STATUS
+Custom Novice basic skills disabled.
+Standard rAthena NV_BASIC restored/kept active.
+
+CHANGES
+1. db/re/skill_tree.yml
+   Custom Novice skill entries 9000-9008 are preserved as comments.
+   NV_BASIC remains active with MaxLevel 9.
+
+2. db/pre-re/skill_tree.yml
+   Same compatibility change applied.
+
+3. src/map/skills/custom/skill_factory_custom.cpp
+   Factory dispatch cases for the custom Novice active skills are commented.
+   Implementations remain in source for future restoration.
+
+4. src/map/clif.cpp
+   CUSTOM_SOCIAL_BASIC bypass was removed from Basic Skill checks.
+   Standard NV_BASIC checks are authoritative again.
+
+IMPORTANT
+The custom implementation was preserved instead of deleted.
+The goal is reversible deactivation.
+
+VALIDATION
+Compile the affected map-server objects and perform an in-game Novice
+skill-tree test before production homologation.

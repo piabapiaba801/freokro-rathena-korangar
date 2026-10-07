@@ -1,0 +1,63 @@
+FREOKRO V19 - VALIDACAO SERVER-SIDE DO CUSTOM AUCTION
+DATA: 2026-09-26
+
+CAUSA RAIZ ENCONTRADA
+- O rAthena query_sql retorna quantidade de linhas somente para SELECT.
+- INSERT, UPDATE e DELETE retornavam 0 mesmo quando executados.
+- O Auction interpretava 0 como falha e executava ROLLBACK.
+- Isso impedia publicacao, lance, Buy Now, cancelamento e settlement.
+- O banco tambem nao tinha sale_tax e seller_net em custom_auction_history.
+
+CORRECAO
+- Criada F_AuctionSqlRows, que consulta SELECT ROW_COUNT() na mesma conexao.
+- Corrigidas 29 verificacoes DML nos quatro scripts do Auction/Black Market.
+- Aplicada a migracao Phase 5 que adiciona sale_tax e seller_net.
+- Nenhuma semantica global de query_sql foi alterada.
+- PACKETVER 20250716 foi preservado.
+
+ARQUIVOS ALTERADOS
+- npc/custom/custom_black_market.txt
+- npc/custom/custom_auction_settlement.txt
+- npc/custom/custom_auction_admin.txt
+- npc/custom/custom_auction_maintenance.txt
+
+BACKUP
+- ../backup-auction-server-validation-20260926-134048
+- Inclui os scripts, registro tecnico e dump SQL anterior.
+
+TESTES EXECUTADOS
+1. Expiracao de leilao especial sem comprador: PASSOU.
+2. Expiracao de leilao de jogador e devolucao do item por RodEx: PASSOU.
+3. Venda por lance: PASSOU.
+4. Imposto de 3 por cento e pagamento liquido ao vendedor: PASSOU.
+5. Buy Now e settlement imediato: PASSOU.
+6. Cancelamento administrativo, devolucao do item e reembolso: PASSOU.
+7. Lance concorrente e diario de lances: PASSOU.
+8. Anti-sniping com prorrogacao de 120 segundos: PASSOU.
+9. Substituicao do lider e reembolso persistente: PASSOU.
+10. Interrupcao forcada com SETTLEMENT_PENDING persistido: PASSOU.
+11. Recuperacao automatica apos reinicio do map-server: PASSOU.
+12. Segundo reinicio sem duplicar mail, anexo ou historico: PASSOU.
+
+RESULTADOS NUMERICOS
+- Venda 100000: imposto 3000, vendedor 97000.
+- Buy Now 120000: imposto 3600, vendedor 116400.
+- Reembolso de cancelamento: 90000.
+- Reembolso de lance superado: 5000.
+- Cada entrega de item teve exatamente um mail e um anexo.
+- Cada venda teve exatamente uma linha de historico.
+
+RESTAURACAO DO AMBIENTE
+- Todos os dados CODEX_TEST foram removidos.
+- custom_auction, custom_auction_bid, custom_auction_history,
+  custom_auction_wallet, mail e mail_attachments voltaram a zero linhas.
+- login-server, char-server, map-server e cliente foram fechados.
+
+NIVEL REAL
+- Fluxo SQL e worker server-side: TESTADO.
+- Recuperacao e idempotencia apos reinicio: TESTADAS.
+- Interface e operacoes manuais no Ragexe: NAO TESTADAS.
+- Homologacao visual/client-side continua pendente.
+STATUS OPERACIONAL APROVADO PELO USUARIO
+- SEMI-VALIDADO: funcional e testado no servidor; validacao visual no Ragexe pendente.
+

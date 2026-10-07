@@ -1,0 +1,996 @@
+======================================================================
+FREOKRO V19
+REGISTRO TECNICO DEFINITIVO DE IMPLEMENTACOES
+======================================================================
+
+Projeto: FreokRO
+Base: rAthena
+Episode alvo: Episode 19
+PACKETVER: 20250716
+Checkpoint atual: Advanced Pet System Phase 11
+Escopo atual: Server-side
+Status geral: Desenvolvimento / aguardando homologacao final Windows
+
+IMPORTANTE:
+Este documento registra o comportamento FINAL atualmente desejado para
+cada sistema.
+
+Quando uma regra antiga foi substituida por uma nova, prevalece sempre
+a regra mais recente documentada aqui.
+
+Este arquivo usa ASCII puro.
+
+======================================================================
+1. EPISODE 19
+======================================================================
+
+STATUS:
+Implementado server-side.
+Client-side permanece separado.
+
+ESCOPO:
+- Questline principal do Episode 19.
+- Merchants e barter.
+- Mapas.
+- Warps.
+- Spawns.
+- Monstros.
+- Skills e AI.
+- Instancias do episodio.
+
+INSTANCIAS TRABALHADAS:
+- Bagot Laboratory.
+- Confused Snake's Nest.
+- Iwin Patrol.
+- Airship Destruction.
+- Simulation Battle.
+
+CORRECOES REALIZADAS:
+- Airship Destruction revisada/corrigida.
+- Confused Snake's Nest teve dialogos/npctalk ausentes corrigidos.
+- Evento OnTouch indefinido neutralizado.
+- Monstros, skills e AI revisados/corrigidos.
+- Simulation Battle recebeu complemento de recompensa.
+
+RECOMPENSA PRINCIPAL REGISTRADA:
+- Base EXP: 130609489
+- Job EXP: 10000000
+
+STATUS CLIENT-SIDE:
+Pendente de validacao junto ao cliente 20250716.
+
+======================================================================
+2. RANDOM OPTIONS
+======================================================================
+
+STATUS:
+Implementado server-side.
+
+OBJETIVO:
+Substituir o comportamento tradicional de Random Options no momento
+do drop por um sistema aplicado quando o item entra no inventario.
+
+REGRA PRINCIPAL:
+Random Options padrao de drop de monstros fica desativado.
+A nova verificacao acontece durante a aquisicao do item.
+
+QUANTIDADE:
+O sistema suporta de 0 ate 5 Random Options.
+
+CHANCES GLOBAIS REGISTRADAS:
+- 0 options: 5%
+- 1 option: 25%
+- 2 options: 20%
+- 3 options: 15%
+- 4 options: 10%
+- 5 options: 5%
+
+OBSERVACAO:
+Os percentuais acima sao os valores de projeto registrados.
+Antes da homologacao deve ser confirmado como o restante da
+distribuicao probabilistica esta tratado no codigo caso a soma
+nao represente 100%.
+
+APLICACAO:
+- Monstros normais: SIM.
+- Champion Monsters: SIM.
+- Bosses: NAO.
+
+INTEGRACOES:
+- Pickup normal.
+- Autoloot.
+- Pet Loot moderno.
+- Trade/Storage preservam options existentes.
+
+======================================================================
+3. PRESERVE SYSTEM
+======================================================================
+
+STATUS:
+Implementado.
+
+TIPO:
+Toggle ON/OFF.
+
+COMPORTAMENTO:
+O jogador pode reutilizar a skill/comando correspondente para alternar
+o estado do Preserve.
+
+ESTADOS:
+- ON
+- OFF
+
+O sistema nao deve exigir reinicio completo do servidor para alteracoes
+administrativas previstas pelo FUNK.
+
+======================================================================
+4. GEARPROTECT
+======================================================================
+
+STATUS:
+Implementado.
+
+OBJETIVO:
+Evitar venda acidental de equipamentos importantes para NPC.
+
+PROTEGE ITENS QUE POSSUAM:
+- Refino.
+- Carta.
+- Random Option.
+
+RESULTADO:
+Equipamentos protegidos nao devem ser vendidos normalmente para NPC.
+
+======================================================================
+5. PARTY JOB SYNERGY BONUS
+======================================================================
+
+STATUS:
+Implementado server-side.
+
+OBJETIVO:
+Aplicar bonus baseado na composicao de jobs dentro da party.
+
+ORIGEM:
+Sistema baseado na referencia estudada para Party Job Synergy,
+com correcoes/adaptacoes para o FreokRO.
+
+STATUS:
+Requer validacao final multiplayer durante homologacao Windows.
+
+======================================================================
+6. CARD DROP ANNOUNCEMENT E LOG
+======================================================================
+
+STATUS:
+Implementado.
+
+FUNCOES:
+- Anuncio de cartas relevantes.
+- Registro SQL.
+- Suporte a rastreamento administrativo.
+
+ESCOPO REGISTRADO:
+- MVP.
+- Mini-Boss.
+- Monstros normais.
+- Champion Monsters.
+
+======================================================================
+7. GLOBAL SKILL CRITICAL
+======================================================================
+
+STATUS:
+Implementado server-side.
+
+OBJETIVO:
+Permitir Critical em skills de dano dos jogadores.
+
+ESCOPO:
+- Skills fisicas de dano.
+- Skills magicas de dano.
+
+CHANCE:
+Chance de Critical da skill = 50% do Critical atual do personagem.
+
+EFEITO VISUAL DESEJADO:
+Critical balloons em vermelho.
+
+OBSERVACAO:
+Parte visual pode depender do cliente.
+
+======================================================================
+8. RENTAL CARD RETURN
+======================================================================
+
+STATUS:
+Implementado server-side.
+
+OBJETIVO:
+Tratar devolucao de cartas relacionadas ao sistema de Rental.
+
+ENTREGA:
+RodEx utilizado quando aplicavel.
+
+STATUS:
+Aguardando validacao final em ambiente Windows.
+
+======================================================================
+9. WELCOME SYSTEM
+======================================================================
+
+STATUS:
+Implementado.
+
+FUNCAO:
+Sistema de boas-vindas integrado ao servidor.
+
+======================================================================
+10. AUTOATTACK
+======================================================================
+
+STATUS:
+Implementado server-side.
+
+COMPONENTES:
+- AutoAttack Core.
+- Filtros.
+- Target Tiers.
+
+OBJETIVO:
+Automatizar selecao/ataque de alvos dentro das regras configuradas.
+
+DISPONIBILIDADE SEMANAL:
+- Segunda-feira: liberado.
+- Terca-feira: liberado.
+- Quarta-feira: liberado.
+- Quinta-feira: liberado.
+- Sexta-feira: liberado ate 23:59:59.
+- Sabado: bloqueado.
+- Domingo: bloqueado.
+- Segunda 00:00:00: liberado novamente.
+
+RELOGIO:
+A regra utiliza o horario local do host do map-server.
+
+PROTECAO DE ATIVACAO:
+@autoattack on e recusado durante sabado e domingo.
+
+PROTECAO DURANTE EXECUCAO:
+O timer do AutoAttack verifica a disponibilidade semanal durante a
+execucao. Se uma sessao iniciada na sexta atravessar para sabado,
+o AutoAttack e desligado no primeiro ciclo do timer apos a virada,
+o alvo e limpo e ataque/movimento automaticos sao interrompidos.
+
+FUNK:
+O AutoAttack somente funciona quando FUNK Master e FUNK AutoAttack
+tambem estiverem habilitados. A janela semanal nao substitui os
+controles administrativos existentes.
+
+REINICIO:
+Nao e necessario reiniciar login-server, char-server ou map-server
+para a mudanca semanal de disponibilidade.
+
+STATUS:
+Requer testes praticos com diferentes classes, skills, mapas e teste
+de transicao sexta->sabado e domingo->segunda.
+
+======================================================================
+11. DURABILITY SYSTEM
+======================================================================
+
+STATUS:
+Implementado server-side.
+
+OBJETIVO:
+Sistema customizado de durabilidade de equipamentos.
+
+NPC:
+Uma copia/local de gerenciamento/reparo deve existir em Prontera
+para facilitar testes.
+
+STATUS:
+Aguardando testes completos com cliente.
+
+======================================================================
+12. MARKET CLONE / OFFLINE VENDING
+======================================================================
+
+STATUS:
+Implementado server-side.
+
+OBJETIVO:
+Permitir persistencia/representacao de lojas sem depender da presenca
+normal do personagem conectado.
+
+INTEGRACOES:
+- Vending.
+- Global Market.
+- Black Market.
+
+STATUS:
+Aguardando validacao completa com cliente 20250716.
+
+======================================================================
+13. EXTENDED VENDING
+======================================================================
+
+STATUS:
+Integrado ao conjunto de sistemas comerciais.
+
+OBJETIVO:
+Suporte a formas/currencies adicionais de comercio conforme
+configuracao do servidor.
+
+======================================================================
+14. MVP TOMB
+======================================================================
+
+STATUS:
+Implementado server-side.
+
+COMPORTAMENTO:
+Ao morrer um MVP configurado, seu Tomb pode ser criado.
+
+REGRA CUSTOMIZADA DO FREOKRO:
+Quando o proximo boss correspondente surgir no mapa,
+o Tomb anterior deve desaparecer.
+
+======================================================================
+15. REGIONAL BOSS SYSTEM
+======================================================================
+
+STATUS:
+Implementado/desenvolvido server-side.
+
+REGRA GLOBAL:
+Natural boss spawn deve permanecer desativado quando o sistema
+customizado correspondente estiver controlando o nascimento.
+
+CASO ESPECIAL - ORC AREA:
+Bosses:
+- Orc Lord.
+- Orc Hero.
+
+GATILHO:
+1000 kills.
+
+REGRA:
+Alternancia obrigatoria:
+Orc Lord -> Orc Hero -> Orc Lord -> Orc Hero...
+
+TOMB:
+O Tomb do boss anterior desaparece quando o proximo boss do ciclo
+for criado.
+
+======================================================================
+16. BASIC SKILLS CUSTOM
+======================================================================
+
+STATUS:
+DESABILITADAS NA FREOKRO V19.
+
+DECISAO V19:
+- As skills customizadas do Novice foram comentadas na Skill Tree.
+- Os dispatches das skills customizadas foram comentados no factory.
+- O bypass CUSTOM_SOCIAL_BASIC foi removido das verificacoes sociais.
+- NV_BASIC padrao permanece habilitada com MaxLevel 9.
+- As definicoes customizadas permanecem preservadas no source/database
+  para permitir restauracao futura sem perder a implementacao.
+- Esta mudanca nao apaga os sistemas independentes do FreokRO; ela
+  desabilita o acesso a eles pela antiga arvore customizada do Novice.
+
+HABILIDADE BASICA ATIVA DO NOVICE:
+- NV_BASIC
+- MaxLevel: 9
+- Comportamento padrao do rAthena restaurado para os checks basicos.
+
+======================================================================
+17. MONSTER CATALOG
+======================================================================
+
+STATUS:
+Implementado server-side.
+
+COMPONENTES:
+- Monster Catalog.
+- Catalog EXP.
+
+INTEGRACAO:
+FUNK possui controle administrativo relacionado ao sistema.
+
+======================================================================
+18. CHAMPION MONSTERS
+======================================================================
+
+STATUS:
+Implementado/customizado server-side.
+
+TIPOS:
+- Furioso.
+- Precioso.
+- Fugaz.
+- Arcano.
+- Experiente.
+
+MODIFICADORES BASE:
+- HP: 20x.
+- ATK: 3x.
+- MATK: 1.5x.
+- DEF: 2x.
+- MDEF: 2x.
+
+ANUNCIO:
+Local ao mapa.
+
+EXPERIENTE:
+- Base EXP: 50x.
+- Class/Job EXP: 50x.
+
+PRECIOSO:
+- Drop original: 5x.
+
+ARCANO:
+- +50% Magic Damage.
+
+FUGAZ:
+- +50% ASPD.
+- +50% Movement Speed.
+
+FURIOSO:
+- Ao atingir 51% HP entra em Rage.
+- Nao usa simplesmente Acolyte Agi Up.
+- Usa estado interno de Rage.
+
+AURA:
+Efeito visual nos pes quando suportado server-side.
+- Experiente: branco/azul.
+- Precioso: dourado.
+
+======================================================================
+19. SERVERGUARD
+======================================================================
+
+STATUS:
+Integrado ao conjunto server-side.
+Aguardando validacao completa antes de producao.
+
+======================================================================
+20. VOICE CHAT
+======================================================================
+
+STATUS:
+PARCIAL.
+
+SERVER-SIDE:
+Componentes possiveis mantidos/em standby.
+
+CLIENT-SIDE:
+Pendente.
+
+Nao declarar completamente funcional antes de teste server + client.
+
+======================================================================
+21. FUNK V1.0
+======================================================================
+
+NOME:
+Function Control Panel.
+
+STATUS:
+Implementado server-side.
+
+ACESSO:
+Group Level 99+.
+
+RECURSOS:
+- Master switch.
+- Toggles individuais.
+- Aplicacao runtime quando suportada.
+- Reconciliacao de estado/reloads.
+- Evitar restart completo quando tecnicamente possivel.
+
+SISTEMAS REGISTRADOS:
+- Market Clone / Offline Vending.
+- Extended Vending.
+- Random Options.
+- Preserve.
+- GearProtect.
+- Champion Monsters.
+- MVP Tomb.
+- Global Market Search.
+- Auction Access.
+- Critical Skills.
+- Pet Access.
+
+NPC:
+Copia administrativa/teste em Prontera.
+
+======================================================================
+22. BLACK MARKET
+======================================================================
+
+STATUS:
+Implementado server-side.
+
+SKILL:
+CUSTOM_BLACK_MARKET
+ID: 9007
+TIPO: Self / NoDamage.
+
+FONTES:
+- Vending normal.
+- Offline Vending.
+- Market Clone.
+
+FREE - GROUP LEVEL 0:
+- Resultados de busca.
+- Viagem com confirmacao.
+- Taxa: 10000 Zeny.
+- Limite diario: 10.
+
+VIP - GROUP LEVEL >= 1:
+- Acesso remoto.
+- Limite diario: 50.
+
+RESET:
+Quota diaria persistente baseada na data do banco.
+
+======================================================================
+23. CUSTOM AUCTION
+======================================================================
+
+STATUS:
+Phase 8 implementada.
+Ainda nao homologada para producao.
+
+PHASE 1:
+- FUNK switch.
+- Fundacao SQL.
+
+PHASE 2:
+- Listing.
+- Escrow.
+
+PHASE 3:
+- Bids.
+- Anti-sniping.
+- Buy Now.
+
+PHASE 4:
+- Settlement.
+- RodEx.
+
+PHASE 5:
+- Bloqueio de self-bid.
+- Fee.
+- Tax.
+- Listing limits.
+- History.
+
+PHASE 6:
+- @serverauction.
+
+PHASE 7:
+- Inspect.
+- Cancel.
+- Audit.
+- Recover.
+
+PHASE 8:
+- SQL transaction hardening.
+
+LIMITACAO CONHECIDA:
+Fronteira entre Zeny mantido em memoria no map-server e
+transacoes SQL ACID.
+
+ETAPA FINAL ADIADA:
+Somente depois dos testes client-side:
+- Crash/failure tests.
+- Desconexao durante operacoes.
+- Testes de duplicacao/perda.
+- Revisao de escrow.
+- Se necessario, migracao critica para C++/char-server.
+
+NPC:
+Copia de teste/administracao em Prontera.
+
+======================================================================
+24. ADVANCED PET SYSTEM
+======================================================================
+
+STATUS:
+Phase 11.
+
+TOTAL DE PETS RENEWAL:
+107.
+
+CLASSIFICACAO:
+- Utility: 44.
+- Offensive: 48.
+- Defensive: 15.
+
+TAGS:
+- [uti]
+- [off]
+- [def]
+
+24.1 PET SUPPORT
+- pet_attack_support.
+- pet_damage_support.
+- pet_status_support.
+
+24.2 PET LOOT MODERNO
+- Procura item no chao.
+- Caminha ate o item.
+- Valida permissao.
+- Coleta.
+- Entrega ao inventario do dono.
+- Respeita ownership e party loot.
+- Nao remove o item antes de ADDITEM_SUCCESS.
+
+24.3 UTILITY PET LOOT
+Raios registrados:
+- Poring: 5.
+- Drops: 5.
+- Poporing: 6.
+- Yoyo: 5.
+- Marin: 6.
+- Mastering: 7.
+- Angeling: 9.
+- Choco: 7.
+- Dr. Eggring: 7.
+- Sweets Drops: 7.
+
+24.4 UTILITY EXP/DROP
+EXP:
+- Lunatic: +10%.
+- Rocker: +10%.
+- Peco Peco: +10%.
+- Leaf Lunatic: +15%.
+- Metaller: +15%.
+- Grand Peco: +15%.
+
+DROP +10%:
+- Smokie.
+- Spore.
+- Christmas Goblin.
+- Miyabi Ningyo.
+- Civil Servant.
+- Leaf Cat.
+
+24.5 COMBAT PETS
+OFFENSIVE:
+- HP baseado no monstro correspondente.
+- Cooldown ofensivo minimo: 5 segundos.
+
+DEFENSIVE:
+- HP: 175% do HP base.
+- Cooldown ofensivo minimo: 8 segundos.
+
+UTILITY:
+- Fora do targeting normal de combate.
+
+24.6 KO
+- Pet desaparece temporariamente.
+- Egg permanece.
+- Intimidade permanece.
+- Sem morte permanente.
+- Tempo: 300 segundos / 5 minutos.
+- Retorno com HP cheio conforme implementacao atual.
+
+24.7 INTIMIDADE
+MAX: 750.
+START: 150.
+
+FAIXAS:
+- None: 0.
+- Awkward: 1-74.
+- Shy: 75-187.
+- Neutral: 188-449.
+- Cordial: 450-674.
+- Loyal: 675-750.
+
+Combate inicia em Cordial 450.
+Pets antigos acima de 750 sao limitados ao novo teto em memoria.
+
+24.8 FEEDING
+HungerIncrease registrado: 20.
+IntimacyFed varia por pet e nao foi uniformizado.
+
+Distribuicao historicamente registrada:
+- +15: 40 pets.
+- +10: 20 pets.
+- +20: 17 pets.
+- +50: 14 pets.
+- +30: 8 pets.
+- +40: 5 pets.
+- 0: 2 pets.
+- +1000: 1 pet.
+
+24.9 AUTOFEED
+VIP ONLY.
+Group Level >= 1.
+
+Automatico:
+Hunger <= 75.
+
+Logica:
+- Hunger > 90: overfeed.
+- Hunger 76-90: IntimacyFed / 2.
+- Hunger <= 75: IntimacyFed integral.
+
+@autofeed now:
+- Imediato.
+- Exige VIP.
+- Nao cria comida.
+- Nao ignora alimento necessario.
+
+======================================================================
+25. NPC IMPLEMENTACOES FREOKRO
+======================================================================
+
+LOCAL:
+Prontera.
+
+FUNCAO:
+Consulta das implementacoes do servidor.
+
+REGRA:
+Sempre atualizar quando uma nova implementacao entrar no projeto.
+Nao utilizar como painel administrativo.
+
+======================================================================
+26. PENDENCIAS CLIENT-SIDE
+======================================================================
+
+- Visuals dependentes do cliente.
+- Egg/item names quando itemInfo exigir.
+- petInfo.lub.
+- PetEvolution.lub quando necessario.
+- Interfaces customizadas.
+- Emotions UI.
+- Voice Chat client-side.
+- Ajustes especificos do Ragexe 20250716.
+- Validacao visual de Critical.
+- Recursos dependentes de packet/UI.
+
+======================================================================
+27. COMPILACAO E HOMOLOGACAO
+======================================================================
+
+TARGET:
+Windows x64 Release.
+
+ORDEM:
+1. map-server.
+2. char-server.
+3. login-server.
+
+HISTORICO:
+- char-server teve build completo em checkpoint anterior.
+- login-server teve build completo em checkpoint anterior.
+- map-server ainda nao possui homologacao final registrada.
+
+Phase 11:
+Tentativas atingiram timeout sem erro de compilador mostrado antes
+do timeout. Isso NAO equivale a build completa confirmada.
+
+Nao homologar ate:
+- Build Windows x64 Release completa.
+- Inicializacao dos 3 servidores.
+- Teste SQL.
+- Teste de login.
+- Teste in-game.
+- Testes dos sistemas customizados.
+
+======================================================================
+28. REGRAS DE MANUTENCAO
+======================================================================
+
+1. Trabalhar sempre sobre copia.
+2. Preservar checkpoint anterior.
+3. PACKETVER permanece 20250716 sem decisao explicita em contrario.
+4. Server-side primeiro quando possivel.
+5. Client-side pendente deve ser documentado.
+6. Nova implementacao atualiza codigo, registro e NPC quando aplicavel.
+7. Todo novo ZIP inclui este registro tecnico atualizado.
+8. Nao declarar build concluida sem resultado real.
+9. Nao declarar client-side funcional sem teste.
+10. Auction final somente depois dos testes client-side.
+11. Pet System continua da Phase 11 ou checkpoint posterior.
+12. TXT usa ASCII puro.
+
+======================================================================
+29. ESTADO ATUAL
+======================================================================
+
+VERSAO:
+FreokRO V19.
+
+EPISODE:
+19.
+
+CLIENT TARGET:
+Ragexe / PACKETVER 20250716.
+
+CHECKPOINT:
+Advanced Pet System Phase 11.
+
+SERVER-SIDE:
+Em desenvolvimento avancado.
+
+CLIENT-SIDE:
+Possui pendencias para etapa Windows.
+
+BUILD:
+Exige compilacao/homologacao final completa.
+
+PRODUCAO:
+NAO HOMOLOGADA.
+
+======================================================================
+30. MANUTENCAO ITEMDB / VENDCURRENCY
+======================================================================
+
+STATUS:
+Corrigido e compilado isoladamente.
+
+ALTERACAO:
+- @vendcurrency deixou de usar a API deprecated itemdb_exists().
+- Validacao de Item ID agora usa item_db.exists().
+- Comportamento funcional esperado permanece o mesmo.
+
+VALIDACAO:
+- src/map/atcommand.cpp compilou com sucesso como obj/atcommand.o.
+- O warning deprecated de itemdb_exists nao apareceu na compilacao isolada.
+- Build completo do map-server nao foi concluido nesta etapa por limite de tempo.
+
+======================================================================
+
+======================================================================
+
+31. INSTRUCOES DE CONTINUIDADE PARA NOVA INSTANCIA
+======================================================================
+
+OBJETIVO:
+Esta secao existe para que qualquer nova instancia do ChatGPT possa
+continuar o desenvolvimento do FreokRO com o minimo possivel de perda
+de contexto, retrabalho ou regressao.
+
+FONTE DE VERDADE:
+1. O ZIP de trabalho mais recente e a base principal.
+2. Este REGISTRO_TECNICO_DEFINITIVO_FREOKRO.txt e o documento mestre
+   das decisoes e implementacoes do projeto.
+3. O codigo do checkpoint atual prevalece sobre anotacoes historicas
+   antigas quando houver divergencia comprovada.
+4. Documentos de fases anteriores servem como historico e referencia,
+   mas nao devem substituir automaticamente uma decisao mais recente.
+5. Em caso de conflito entre memoria, conversa antiga, documento antigo
+   e codigo atual, inspecionar o codigo e este registro antes de agir.
+
+PROCEDIMENTO AO INICIAR UMA NOVA INSTANCIA:
+1. Receber/anexar o ZIP WORKING mais recente.
+2. Ler este registro tecnico antes de propor alteracoes grandes.
+3. Confirmar no codigo os arquivos e pontos afetados pela tarefa.
+4. Nao reconstruir o projeto a partir de memoria se o ZIP estiver
+   disponivel.
+5. Preservar a versao BACKUP FROZEN anterior sem alteracao.
+6. Criar uma nova copia de trabalho antes de mudancas de maior risco.
+7. Continuar usando FreokRO V19 ate decisao explicita de nova versao.
+8. Manter Episode 19 e PACKETVER 20250716 salvo decisao explicita.
+
+REGRA DE BACKUP E CHECKPOINT:
+- Nunca trabalhar sobre o backup congelado.
+- BACKUP FROZEN e somente recuperacao/referencia.
+- Alteracoes sao feitas na copia WORKING.
+- Antes de uma mudanca estrutural grande, criar novo checkpoint.
+- Depois de uma etapa aprovada, gerar novo ZIP verificavel.
+- Verificar integridade do ZIP antes de entregar.
+- Quando possivel, registrar SHA256 do artefato entregue.
+
+REGRA DE IMPLEMENTACAO:
+- Primeiro identificar exatamente o comportamento atual.
+- Depois definir o comportamento desejado.
+- Alterar somente os pontos necessarios.
+- Evitar remover codigo customizado quando comentar/desabilitar for
+  suficiente e a preservacao tiver valor para o projeto.
+- Nao reativar codigo antigo apenas porque ele ainda existe no source.
+- Nao alterar sistemas nao relacionados sem necessidade tecnica.
+- Preservar compatibilidade com os sistemas FreokRO ja integrados.
+
+REGRA SERVER-SIDE / CLIENT-SIDE:
+- Priorizar server-side quando a funcionalidade permitir.
+- Toda dependencia real do cliente deve ser marcada como pendente.
+- Nao afirmar que uma mudanca client-side funciona sem cliente e teste.
+- Nao misturar pendencia visual do cliente com falha server-side.
+
+REGRA DE COMPILACAO:
+- Nunca declarar build completa quando apenas um objeto compilou.
+- Compilacao isolada de um .cpp valida somente aquele alvo/etapa.
+- Timeout sem erro nao significa build aprovada.
+- Erro deve ser registrado com arquivo, linha e mensagem quando
+  disponiveis.
+- Ordem preferida de homologacao final do servidor:
+  1. map-server.
+  2. char-server.
+  3. login-server.
+- Target final: Windows x64 Release.
+
+REGRA DE TESTE:
+- Diferenciar claramente:
+  IMPLEMENTADO = codigo alterado/integrado.
+  COMPILADO = alvo realmente compilado com sucesso.
+  TESTADO = comportamento executado em teste correspondente.
+  HOMOLOGADO = conjunto final aprovado no ambiente alvo.
+- Nao transformar ausencia de erro aparente em homologacao.
+- Para sistemas persistentes, testar reinicio e banco quando aplicavel.
+- Para sistemas de combate, testar estados limite e desconexao quando
+  aplicavel.
+
+REGRA DE DOCUMENTACAO:
+- Toda nova implementacao ou mudanca relevante atualiza este registro.
+- Registrar comportamento final, valores, escopo, integracoes,
+  limitacoes, testes realizados e pendencias.
+- Atualizar o NPC Implementacoes FreokRO quando a mudanca for uma
+  implementacao/recurso que deva aparecer para consulta in-game.
+- Documentos historicos nao devem ser apagados sem necessidade.
+- Todo TXT produzido para o projeto deve usar ASCII puro.
+- Sem acentos, cedilha ou simbolos Unicode em TXT.
+
+REGRA DE VERSIONAMENTO:
+- Versao atual: FreokRO V19.
+- Nao incrementar V19 para V20 automaticamente.
+- Somente o usuario decide quando o numero principal muda.
+- Fases internas podem receber nomes descritivos sem mudar a versao
+  principal.
+
+ESTADO CRITICO QUE NAO DEVE SER PERDIDO:
+- Novice custom Basic Skills estao desabilitadas/comentadas na V19.
+- NV_BASIC padrao esta restaurada com MaxLevel 9.
+- Codigo customizado antigo foi preservado para possivel restauracao.
+- AutoAttack funciona somente de segunda a sexta pelo horario local do
+  host do map-server.
+- AutoAttack verifica a regra semanal tambem durante a execucao.
+- Sabado e domingo bloqueiam nova ativacao e interrompem sessao ativa.
+- AutoAttack continua subordinado aos controles FUNK correspondentes.
+- @vendcurrency usa item_db.exists() no lugar de itemdb_exists().
+- O warning deprecated relacionado a itemdb_exists foi removido na
+  compilacao isolada de atcommand.cpp.
+- Advanced Pet System permanece na Phase 11.
+- Custom Auction Phase 8 ainda precisa dos testes finais de falha,
+  crash, desconexao, duplicacao/perda e escrow depois dos testes de
+  cliente; possivel migracao critica para C++/char-server continua
+  adiada ate essa etapa.
+- Projeto ainda NAO esta homologado para producao.
+
+REGRAS DE SEGURANCA CONTRA REGRESSAO:
+- Nao substituir PACKETVER 20250716 por valor generico.
+- Nao restaurar automaticamente a arvore customizada do Novice.
+- Nao remover o bloqueio semanal do AutoAttack.
+- Nao voltar de item_db.exists() para itemdb_exists().
+- Nao reduzir o Pet System para checkpoint anterior a Phase 11.
+- Nao considerar o Auction finalizado para producao antes dos testes
+  pendentes.
+- Nao sobrescrever backup congelado.
+
+QUANDO HOUVER DUVIDA:
+- Parar a alteracao especifica antes de adivinhar.
+- Inspecionar o ZIP atual, codigo e este registro.
+- Se a decisao de produto continuar ambigua, pedir confirmacao ao
+  usuario antes de mudar comportamento funcional.
+
+ENTREGA DE CADA NOVA ETAPA:
+- Informar o que foi alterado.
+- Informar arquivos principais afetados.
+- Informar o que foi realmente compilado/testado.
+- Informar claramente o que ficou pendente.
+- Atualizar este registro.
+- Atualizar NPC quando aplicavel.
+- Validar ASCII dos TXT.
+- Validar integridade do ZIP.
+- Entregar o novo artefato sem modificar o BACKUP FROZEN.
+
+======================================================================
+FIM DO REGISTRO TECNICO
+======================================================================

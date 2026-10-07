@@ -1,0 +1,46 @@
+# Local configuration may contain database credentials or host addresses.
+/conf/import/
+
+# Runtime data, backups and generated local files
+/.vs/
+/generated/
+/log/
+/work/
+/work-runtime-logs*/
+/backup-*/
+/DATABASE_CHECKPOINT/
+/CLIENT_SIDE_PREPARED/
+/REGISTRO_TECNICO_DEFINITIVO_FREOKRO.txt
+/.last-fixes-1-4-backup.txt
+/db/import/map_cache.dat
+
+# Build products
+*.exe
+*.dll
+*.pdb
+*.obj
+*.o
+*.a
+*.ilk
+*.idb
+*.exp
+*.lib
+*.tlog
+*.lastbuildstate
+/Debug/
+/Release/
+/x64/
+/config.status
+
+# Local logs and temporary archives
+*.log
+*.err
+*.bak
+*.tmp
+*.7z
+*.zip
+*.rar
+.DS_Store
+Thumbs.db
+*.user
+*.suo

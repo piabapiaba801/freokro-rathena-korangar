@@ -1,0 +1,249 @@
+FREOKRO - BLOCO DE NOTAS / IMPLEMENTACOES ATUALIZADO
+Data do checkpoint: 23/09/2026
+Base identificada no pacote: FreaokRO V15 / Episode 19
+PACKETVER alvo: 20250716
+
+OBSERVACAO SOBRE VERSAO
+O nome/linhagem do pacote de trabalho continua sendo V15-EP19. "EP19" e o episodio de conteudo do Ragnarok e nao significa FreokRO V19. As fases 1-7 do Custom Auction tambem nao alteram automaticamente o numero da versao principal. Portanto, neste checkpoint nao ha evidencia documental suficiente para chamar a base de FreokRO V18 ou V19. Se for desejado, a proxima consolidacao pode receber formalmente um novo numero de release, mas este backup preserva a identificacao real da arvore atual.
+
+IMPLEMENTACOES SERVER-SIDE ACUMULADAS
+- Episode 19 integrado/corrigido server-side: quests, merchants, barter, mapas/warps/spawns, instancias e mobs/skills/AI relacionados.
+- Random Options: geracao na aquisicao, 0-5 opcoes, regras para monstros normais/Champions e preservacao em transferencias.
+- Preserve Toggle ON/OFF.
+- GearProtect contra venda acidental de cartas/equipamentos refinados/cardeados.
+- Party Job Synergy.
+- Card Drop Announcement + auditoria SQL.
+- Critical global para skills de jogadores.
+- Rental Card Return via RodEx.
+- Welcome System.
+- AutoAttack Core + filtros.
+- Durability System com persistencia e reparo.
+- Market Clone / Offline Vending e Extended Vending.
+- MVP Tomb Extended e lifecycle de Regional Boss.
+- Regional Boss persistente.
+- Monster Catalog / Olhar do Cacador.
+- Champion Monsters.
+- ServerGuard baseline.
+- Voice bridge server-side.
+- FUNK: painel runtime para habilitar/desabilitar sistemas, incluindo Auction.
+
+BLACK MARKET / BUSCA DE LOJAS
+- Skill CUSTOM_BLACK_MARKET (ID 9007), somente em mapas TOWN.
+- Busca em lojas normais/offline e Market Clones.
+- VIP (group >= 1): acesso remoto, quota diaria persistente de 50.
+- Free (group 0): viagem ate a loja mediante confirmacao, custo configurado e quota diaria persistente de 10.
+- Reset diario baseado na data SQL do servidor.
+- Quotas persistem apos restart/crash.
+
+CUSTOM AUCTION - FASES 1 A 7
+Fase 1 - Fundacao
+- Menu proprio do Auction dentro do Black Market.
+- Schema persistente InnoDB para leiloes, lances e historico.
+- FUNK switch `auction`.
+- Navegacao: procurar, meus lances, meus leiloes, criar, historico e especiais.
+
+Fase 2 - Item Escrow
+- Criacao de leilao com item do inventario, quantidade, lance inicial, Buy Now opcional e 6/12/24/48h.
+- Snapshot do item preserva refine, cards, Random Options, unique_id, enchant grade e Durability.
+- Estado ESCROW_PENDING para impedir exposicao de operacao incompleta.
+- Bloqueio de itens equipados/bound/temporarios/nao negociaveis conforme validacoes implementadas.
+
+Fase 3 - Bidding
+- Zeny escrow persistente.
+- Incremento minimo: max(1.000 Zeny, 5%).
+- Protecao concorrente no update do leilao.
+- Reembolso persistente do lider superado.
+- Anti-sniping: lance nos 120s finais estende 120s.
+- Comprar Agora muda ACTIVE -> SETTLEMENT_PENDING.
+
+Fase 4 - Settlement
+- Worker periodico para vencimentos e pendencias.
+- Item vencedor entregue por RodEx preservando snapshot completo.
+- Vendedor recebe Zeny por RodEx.
+- Leilao sem lance devolve item por RodEx.
+- Refund wallet processada de forma persistente.
+- Transacoes InnoDB + SELECT ... FOR UPDATE no settlement.
+- Rebids/Buy Now do lider reservam somente diferenca de Zeny.
+
+Fase 5 - Economia e protecao do vendedor
+- Vendedor nao pode dar lance nem Comprar Agora no proprio anuncio.
+- Protecao aplicada tambem na operacao SQL, nao apenas na interface.
+- Taxa de anuncio: 10.000 Zeny.
+- Imposto de venda: 3%; vendedor recebe 97%.
+- Limite simultaneo: free 3 / VIP 10.
+- VIP nao recebe prioridade em lance.
+- Historico de 30 dias: quantidade, media, minimo e maximo + ultimas vendas.
+- listing_fee, sale_tax e seller_net persistidos para auditoria.
+
+Fase 6 - Leiloes Especiais do Servidor
+- Grupo 99: @serverauction <item_id> <amount> <start_price> <buy_now|0> <hours> [refine].
+- Duracao administrativa: 1..168 horas.
+- Usa bidding/escrow/Buy Now/anti-sniping/settlement comuns.
+- Zeny vencedor e 100% sink do servidor.
+- Auditoria administrativa em custom_auction_admin_log.
+- Leilao oficial sem lance expira corretamente.
+
+Fase 7 - Administracao e recuperacao
+- Grupo 99: @auctioninspect, @auctioncancel, @auctionrecover, @auctionaudit.
+- Cancelamento em duas etapas: ACTIVE -> CANCEL_PENDING -> CANCELLED.
+- Reembolso do lider e retorno do item do vendedor pelo pipeline persistente.
+- @auctionrecover reexecuta workers idempotentes de settlement/refund.
+- ESCROW_PENDING antigo e sinalizado para inspecao manual e nao e resolvido por suposicao, evitando risco de duplicacao.
+
+STATUS DE BUILD DESTE CHECKPOINT
+- Compilacoes incrementais de partes alteradas foram realizadas nas fases anteriores.
+- Na Fase 7, o build completo do map-server atingiu o limite de tempo durante skill.cpp sem erro C++ observado ate aquele ponto.
+- Portanto, o link final completo do map-server NAO deve ser tratado como confirmado neste checkpoint.
+
+PROXIMA FASE PLANEJADA
+Hardening/auditoria final: limites anti-abuso, validacoes economicas, concorrencia/race conditions, consistencia SQL, cenarios de crash, tentativas de duplicacao e revisao ponta a ponta.
+
+CUSTOM AUCTION - FASE 8 (HARDENING / AUDITORIA FINAL)
+- Lance: UPDATE concorrente, journal do lance e credito do jogador superado agora ficam na mesma transacao SQL.
+- Comprar Agora: mudanca para SETTLEMENT_PENDING, journal e refund do lider anterior tambem ficam na mesma transacao SQL.
+- Qualquer falha SQL antes do COMMIT executa ROLLBACK e devolve imediatamente o Zeny reservado localmente.
+- Protecao de auto-lance/auto-compra por account_id permanece no predicado autoritativo da operacao.
+- @auctionaudit ampliado: pendencias >5min, violacoes historicas de self-bid e precos invalidos.
+- ESCROW_PENDING continua fail-closed/manual para nao arriscar duplicacao ao adivinhar o estado do inventario apos crash.
+- Limite tecnico documentado: Zeny em memoria do map-server e SQL nao formam uma unica transacao ACID; teste de crash na fronteira ainda e obrigatorio antes de producao.
+
+
+ADVANCED PET SYSTEM - FASE 1
+- Base cruzada com os perfis de suporte/combate que acompanham o rAthena para os pets cadastrados.
+- Ativados os perfis existentes de AttackRate, RetaliateRate e ChangeTargetRate em db/import/pet_db.yml.
+- Ativados SupportScript existentes: ataque, cura, recuperacao, bonus temporarios e coleta, conforme o perfil individual de cada pet.
+- pet_attack_support: yes.
+- pet_damage_support: yes.
+- pet_status_support: yes.
+- Suporte ativo exige intimidade minima 900/1000, preservando a regra nativa configurada no projeto.
+- Evolucoes, captura, alimento, fome e bonus Renewal existentes permanecem preservados em db/re/pet_db.yml.
+- Nesta fase nao foram inventados perfis para pets sem definicao de suporte no import; eles continuam usando seu comportamento/bonus Renewal atual.
+- Client-side de pets adicionais continua pendente de auditoria do petInfo.lub/PetEvolution.lub do Ragexe 20250716.
+
+ADVANCED PET SYSTEM - FASE 2 / PET LOOT MODERNO
+- Pet de utilidade com `petloot` continua precisando localizar e caminhar fisicamente ate o drop.
+- Ao alcancar o item, a coleta entra diretamente no pipeline normal de inventario/party; nao fica guardada no buffer temporario do pet.
+- Preservadas prioridades de loot, party loot, Random Options, anuncios especiais e validacoes de peso/slot/stack.
+- Dono morto ou impossibilitado de coletar nao recebe loot pelo pet.
+- Falha de inventario deixa o item no chao; o drop so e removido depois de entrega bem-sucedida.
+- Persistencia passa a ser a persistencia normal do inventario/char-server, eliminando a janela do buffer volatil do pet para novos pickups.
+- @autoloot, @alootid e @autoloottype removidos do grupo Super Player; permanecem administrativos via Group 99/all_commands.
+
+ADVANCED PET SYSTEM - FASE 3 / AUTOFEED UNIVERSAL
+- Pet Loot moderno sem requisito de Lealdade/900 de intimidade; qualquer intimidade positiva permite coleta.
+- AutoFeed permitido por padrao para todos os 107 pets Renewal da base atual.
+- @autofeed [on|off|now] adicionado para jogadores; estado ON/OFF salvo no pet.
+- @autofeed now forca alimentacao imediata, respeitando a comida real no inventario.
+
+ADVANCED PET SYSTEM - FASE 4 / DISTRIBUICAO PET LOOT
+- Pet Loot moderno distribuido de forma seletiva: 10 dos 44 pets classificados como Utilidade (22,7%).
+- Regra de familia preservada: toda evolucao de uma familia escolhida para Pet Loot mantem a mesma funcao.
+- Familia Poring: Poring 10, Mastering 15, Angeling 20.
+- Familia Drops: Drops 10, Eggring 15, Sweets Drops 15.
+- Familia Yoyo: Yoyo 20, Choco 25.
+- Utilitarios avulsos: Poporing 15 e Marin 15.
+- Os outros 34 pets Utilidade ficam reservados para outras funcoes de utilidade, evitando transformar Pet Loot em habilidade universal.
+- Os numeros representam a capacidade de busca/controle da rotina petloot; a Fase 2 continua entregando cada pickup diretamente ao inventario/party, sem buffer persistente do pet.
+
+
+ADVANCED PET SYSTEM - FASE 5 / RAIO MODERNO DE COLETA
+- O parametro petloot deixa de representar capacidade temporaria e passa a representar raio de deteccao de drops, em celulas.
+- O gate count < max foi removido da busca: nao existe limite artificial de quantidade coletada; cada item valido continua indo direto para inventario/party.
+- O raio configurado tambem limita a aquisicao/pathfinding inicial do drop.
+- Familia Poring: Poring 5, Mastering 7, Angeling 9 celulas.
+- Familia Drops: Drops 5, Eggring 7, Sweets Drops 7 celulas.
+- Familia Yoyo: Yoyo 5, Choco 7 celulas.
+- Utilitarios avulsos: Poporing 6 e Marin 6 celulas.
+- Limites de inventario, peso, stack, propriedade do drop, party loot e alcance fisico continuam obrigatorios.
+- A descricao de capacidade da Fase 4 fica SUPERADA por esta Fase 5.
+
+
+ADVANCED PET SYSTEM - FASE 6 / TAGS DE FUNCAO
+- Os 107 pets Renewal foram classificados no pet_db: 48 ofensivos, 15 defensivos e 44 utilidade.
+- CustomCategory 1=[off], 2=[def], 3=[uti]. A classificacao e interna e preserva familias/evolucoes.
+- Pets vivos/ativos recebem a tag visual dinamicamente no nome enviado ao cliente, inclusive quando o pet possui nome personalizado.
+- O nome persistido do pet nao e alterado; a tag e apenas uma apresentacao, evitando gravar prefixos repetidos no char-server.
+- Os nomes server-side dos ovos receberam o mesmo prefixo em db/re e db/pre-re.
+- ATENCAO CLIENT-SIDE: Ragexe 20250716 normalmente resolve o nome de itens pelo itemInfo Lua. Para a tag aparecer no inventario do cliente, o itemInfo.lub/itemInfo_true.lub do cliente precisa receber os mesmos prefixos. A parte server-side ja esta pronta.
+
+ADVANCED PET SYSTEM - FASE 7 / UTILIDADE: EXP E DROP PESSOAL
+- 12 pets Utilidade receberam especializacao de progressao, sem alterar as tags [uti] e sem misturar familias.
+- EXP pessoal (6 pets): Lunatic +5%, Leaf Lunatic +8%; Rocker +5%, Metaller +8%; Peco Peco +5%, Grand Peco +8%.
+- Drop pessoal (6 pets): Smokie, Spore, Christmas Goblin, Miyabi Ningyo, Civil Servant e Leaf Cat: +5% cada.
+- EXP usa bExpAddRace RC_All. No core, pc_calcexp aplica este bonus como bonus pessoal depois da contribuicao de guilda; portanto o incremento do pet nao aumenta EXP de guilda e nao e compartilhado como bonus de party.
+- Drop usa bDropAddRace RC_All. No core, o modificador e lido da sessao do jogador (sd) que originou o drop; nao concede a taxa aos demais membros do grupo/guilda.
+- As regras normais de distribuicao do item apos o drop continuam existindo; a taxa adicional pertence ao jogador com o pet, nao ao grupo.
+- Evolucoes das tres familias de EXP preservam a mesma funcao e melhoram de +5% para +8%.
+- Esta fase nao altera Pet Loot, AutoFeed, tags, fome ou intimidade.
+
+
+ADVANCED PET SYSTEM - FASE 8 / REBALANCE EXP E DROP
+- Taxas dos pets [uti] de progressao aumentadas apos revisao de balanceamento.
+- EXP pessoal: Lunatic/Rocker/Peco Peco +10%; evolucoes Leaf Lunatic/Metaller/Grand Peco +15%.
+- Drop pessoal: Smokie, Spore, Christmas Goblin, Miyabi Ningyo, Civil Servant e Leaf Cat +10%.
+- Bonus continuam estritamente pessoais; nao sao convertidos em bonus de party ou guilda.
+- Familias de EXP preservam a especializacao durante a evolucao.
+
+ADVANCED PET SYSTEM - FASE 9 / HP, COOLDOWN E KO DE COMBATE
+- Pets [off] e [def] passam a participar do ciclo de HP/KO; [uti] permanece fora do targeting de combate.
+- [off] usa HP base; [def] recebe 175% do HP base.
+- Skill ofensiva [off]: cooldown minimo 5s; [def]: 8s. Suportes mantem Delay individual nativo.
+- HP zero nao destroi pet/ovo: entra em KO, desaparece por 5 min e retorna ao dono com 100% HP.
+- Durante KO, ataque/cast/suporte ficam suspensos.
+- KO e estado runtime, nao morte persistente no banco.
+- pet.cpp, status.cpp e battle.cpp compilados individualmente; link final completo do map-server nao confirmado por timeout.
+
+
+ADVANCED PET SYSTEM - FASE 10 / KO 5 MINUTOS
+- Respawn pos-KO alterado de 30s para 300s (5 min).
+- Intimidade minima de combate mantida em 900/1000 via pet_support_min_friendly.
+
+
+ADVANCED PET SYSTEM - FASE 11 / INTIMIDADE 750 + AUTOFEED VIP
+- Intimidade maxima 750; faixas: Awkward 1-74, Shy 75-187, Neutral 188-449, Cordial 450-674, Loyal 675-750.
+- Todos os novos pets iniciam com 150. Pets existentes acima de 750 sao limitados ao novo teto ao carregar.
+- Combate/suporte liberado em 450, primeiro ponto Cordial. Curva de suporte reescalada: 50% em 450 ate 150% em 750.
+- AutoFeed exclusivo Group Level 1+. Group 0 bloqueado no comando, toggle do cliente e execucao automatica.
+- AutoFeed automatico alimenta em fome <=75, garantindo IntimacyFed integral e evitando meia recompensa/overfeed.
+
+================================================================================
+CHECKPOINT CONSOLIDADO - FREOKRO V18 / ADVANCED PET SYSTEM FASE 11
+Atualizacao do bloco de notas: 2026-09-24
+================================================================================
+
+ESTADO ATUAL CONSOLIDADO DO ADVANCED PET SYSTEM
+- 107 pets Renewal classificados: 48 [off], 15 [def], 44 [uti].
+- Tags aparecem dinamicamente nos pets ativos; nomes server-side dos ovos tambem receberam prefixos. Exibicao dos prefixos dos ovos no inventario ainda depende do itemInfo do Ragexe 20250716.
+- Pet Loot moderno entrega diretamente ao inventario/party apos o pet localizar, caminhar e alcancar fisicamente o drop; nao existe capacidade temporaria de itens no pet.
+- Pet Loot distribuido a 10 pets [uti], com raio progressivo por familia: Poring 5/Mastering 7/Angeling 9; Drops 5/Eggring 7/Sweets Drops 7; Yoyo 5/Choco 7; Poporing 6; Marin 6 celulas.
+- Utilidade de EXP pessoal: Lunatic/Rocker/Peco Peco +10%; Leaf Lunatic/Metaller/Grand Peco +15%.
+- Utilidade de Drop pessoal: Smokie, Spore, Christmas Goblin, Miyabi Ningyo, Civil Servant e Leaf Cat +10%.
+- Bonus de EXP/Drop sao do dono do pet; nao concedem a taxa adicional a party/guilda. Regras normais de distribuicao do item depois que ele cai continuam validas.
+- [off] e [def] possuem ciclo de combate com HP e KO. [off] usa HP base; [def] usa 175% do HP base.
+- Cooldown minimo de skill ofensiva: [off] 5s; [def] 8s. Skills de suporte preservam seus delays individuais.
+- Ao chegar a 0 HP, o pet entra em KO, interrompe combate/suporte, desaparece por 300s (5 min) e retorna ao dono com 100% HP. Pet/ovo/intimidade nao sao perdidos; KO nao e morte persistente.
+- Nova escala de intimidade: maximo 750; inicio 150 para novos pets; Awkward 1-74; Shy 75-187; Neutral 188-449; Cordial 450-674; Loyal 675-750.
+- Pets existentes acima do novo teto sao limitados a 750 ao carregar.
+- [off]/[def] comecam a ajudar em combate/suporte em 450, primeiro ponto de Cordial.
+- Curva de eficiencia de suporte foi reescalada para o novo teto: 50% em 450 ate 150% em 750.
+- AutoFeed permanece disponivel para os 107 pets, mas e recurso VIP: somente Group Level >=1 pode ativar/usar. Group 0 e bloqueado no comando, toggle e execucao automatica.
+- AutoFeed automatico espera fome <=75 para alimentar na faixa que concede IntimacyFed integral, evitando alimentacao prematura com recompensa reduzida e evitando overfeed.
+- @autofeed now continua exigindo alimento real e tambem e restrito a Group Level >=1.
+- O estado ON/OFF do AutoFeed permanece salvo no pet.
+
+VALIDACAO / BUILD DO CHECKPOINT
+- YAMLs da base de pets foram validados nas fases correspondentes: 107 pets Renewal e 87 perfis import.
+- Componentes C++ alterados tiveram compilacoes incrementais em fases anteriores; o link final completo do map-server continua NAO confirmado devido aos limites de tempo/recursos dos builds realizados.
+- Antes de producao, ainda e obrigatorio compilar/linkar o map-server completo e executar testes in-game no Ragexe 20250716.
+
+PENDENCIAS CLIENT-SIDE RELACIONADAS A PETS
+- Atualizar itemInfo.lub/itemInfo_true.lub para garantir [off]/[def]/[uti] visiveis nos nomes dos ovos no inventario.
+- Auditar petInfo.lub/PetEvolution.lub do Ragexe 20250716 para pets/evolucoes adicionais e apresentacao final.
+
+NOTA DE PRECEDENCIA
+- Este checkpoint consolidado representa o estado atual. Quando textos de fases antigas conflitarem com ele, prevalece a fase mais nova (ex.: intimidade 900/1000 foi substituida por 450/750; KO 30s foi substituido por 300s; taxas EXP/Drop da Fase 7 foram substituidas pelas da Fase 8).
+
+
+REGISTRO TECNICO PADRAO
+O documento mestre atual e REGISTRO_TECNICO_DEFINITIVO_FREOKRO.txt.
+Este arquivo de auditoria permanece como historico complementar.

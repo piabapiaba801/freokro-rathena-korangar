@@ -1,0 +1,17 @@
+VALIDACAO OFICIO UNIVERSAL 7002 - 2026-09-27
+
+Status: CORRIGIDO; AGUARDA TESTE VISUAL E FUNCIONAL NO RAGEXE
+
+- Interface deixou de travar: CONFIRMADO PELO USUARIO.
+- Lista alterada para 289 produtos unicos do produce_db.
+- Materiais continuam validados antes da fabricacao.
+- Falta de materiais agora gera mensagem e nao consome itens.
+- Build Release x64: PASSOU.
+- Inicializacao login/char/map: PASSOU.
+- Erros de skill/script/SQL: NENHUM.
+- Teste visual da lista e fabricacao: PENDENTE DO USUARIO.
+
+Backup:
+- backup-oficio-list-fix-20260927-110220
+
+PACKETVER 20250716 preservado.
