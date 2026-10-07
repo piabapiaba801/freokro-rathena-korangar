@@ -24,6 +24,18 @@ The FreokRO server repository starts from this local source tree. It has no earl
 
 Game assets and database contents are not distributed in these repositories. Use assets from your own installation and import the SQL schema before starting the servers.
 
+### 📸 FreokRO in game
+
+The captures below show the locally running FreokRO client connected to this server on October 7, 2026. They document the client and auction interface together; they do not establish that all auction transactions have passed testing.
+
+![FreokRO client with the Black Market auction and item description windows](docs/screenshots/freokro-auction-and-item-details.jpg)
+
+*Black Market auction, inventory, and both item description windows.*
+
+![FreokRO client inventory and item description](docs/screenshots/freokro-client-item-details.jpg)
+
+*Client inventory and item description with the auction closed.*
+
 ### 🏗️ Build and run
 
 On Windows, open `rAthena.sln` and build **Release x64** with Visual Studio Build Tools. Configure the database and local `conf` files in the installation. Deploy `login-server.exe`, `char-server.exe`, and `map-server.exe` with their required configuration. Start the database and servers before the client; start the HUD agent as well for the auction. Installed binaries, database contents, logs, and local credentials are outside this source tree.
